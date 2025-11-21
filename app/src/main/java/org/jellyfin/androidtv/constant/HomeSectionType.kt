@@ -12,6 +12,7 @@ enum class HomeSectionType(
 	override val serializedName: String,
 	override val nameRes: Int,
 ) : PreferenceEnum {
+	MEDIA_BAR("mediabar", R.string.home_section_media_bar),
 	LATEST_MEDIA("latestmedia", R.string.home_section_latest_media),
 	LIBRARY_TILES_SMALL("smalllibrarytiles", R.string.home_section_library),
 	LIBRARY_BUTTONS("librarybuttons", R.string.home_section_library_small),

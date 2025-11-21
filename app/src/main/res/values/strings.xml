@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
-    <string name="app_name_release" translatable="false" tools:ignore="UnusedResources">Jellyfin</string>
-    <string name="app_name_debug" translatable="false" tools:ignore="UnusedResources">Jellyfin Debug</string>
+    <string name="app_name_release" translatable="false" tools:ignore="UnusedResources">Moonfin</string>
+    <string name="app_name_debug" translatable="false" tools:ignore="UnusedResources">Moonfin Debug</string>
     <string name="video_error_unknown_error">Failed to load video</string>
     <string name="loading">Loading…</string>
     <string name="btn_cancel">Cancel</string>
@@ -394,6 +394,7 @@
     <string name="license_license">License</string>
     <string name="home_prefs">Home</string>
     <string name="home_sections">Home sections</string>
+    <string name="home_section_media_bar">Featured media</string>
     <string name="home_section_latest_media">Recently added media</string>
     <string name="home_section_library">My media</string>
     <string name="home_section_library_small">My media (small)</string>
@@ -590,4 +591,15 @@
         <item quantity="one">%1$s album</item>
         <item quantity="other">%1$s albums</item>
     </plurals>
+    
+    <!-- Media Bar Slideshow -->
+    <string name="pref_media_bar_title">Media Bar</string>
+    <string name="pref_media_bar_enable">Enable Media Bar slideshow on home screen</string>
+    <string name="pref_media_bar_enable_summary">Display a featured content slideshow at the top of the home screen</string>
+    <string name="lbl_media_bar_loading">Loading featured content…</string>
+    <string name="lbl_media_bar_error">Failed to load featured content</string>
+    <string name="lbl_media_bar_previous">Previous slide</string>
+    <string name="lbl_media_bar_next">Next slide</string>
+    <string name="lbl_media_bar_pause">Pause slideshow</string>
+    <string name="lbl_media_bar_play">Resume slideshow</string>
 </resources>

@@ -3,13 +3,13 @@
     <item android:state_enabled="true" android:state_focused="false">
         <shape android:shape="rectangle">
             <corners android:radius="?attr/buttonRounding" />
-            <solid android:color="?attr/buttonDefaultNormalBackground" />
+            <solid android:color="@android:color/transparent" />
         </shape>
     </item>
     <item android:state_enabled="false" android:state_focused="false">
         <shape android:shape="rectangle">
             <corners android:radius="?attr/buttonRounding" />
-            <solid android:color="@color/button_default_disabled_background" />
+            <solid android:color="@android:color/transparent" />
         </shape>
     </item>
     <item android:state_enabled="true" android:state_focused="true">

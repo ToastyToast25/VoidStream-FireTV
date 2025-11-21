@@ -29,7 +29,7 @@ class PreferencesRepository(
 		// Note: Do not run parallel as the server can't deal with that
 		// Relevant server issue: https://github.com/jellyfin/jellyfin/issues/5261
 		liveTvPreferences.update()
-		userSettingPreferences.update()
+		// UserSettingPreferences now uses SharedPreferenceStore (local storage) so no server sync needed
 
 		libraryPreferences.clear()
 	}

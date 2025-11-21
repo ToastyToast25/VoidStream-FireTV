@@ -8,6 +8,9 @@ import org.jellyfin.androidtv.ui.itemdetail.MyDetailsOverviewRow
 import org.jellyfin.androidtv.util.InfoLayoutHelper
 import org.jellyfin.androidtv.util.MarkdownRenderer
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.PersonKind
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 class MyDetailsOverviewRowPresenter(
 	private val markdownRenderer: MarkdownRenderer,
@@ -22,25 +25,32 @@ class MyDetailsOverviewRowPresenter(
 			setTitle(row.item.name)
 
 			InfoLayoutHelper.addInfoRow(view.context, row.item, row.item.mediaSources?.getOrNull(row.selectedMediaSourceIndex), binding.fdMainInfoRow, false)
-			binding.fdGenreRow.text = row.item.genres?.joinToString(" / ")
+			// Hide genre row - now in grouped metadata
+			binding.fdGenreRow.isVisible = false
 
-			binding.infoTitle1.text = row.infoItem1?.label
-			binding.infoValue1.text = row.infoItem1?.value
-
-			binding.infoTitle2.text = row.infoItem2?.label
-			binding.infoValue2.text = row.infoItem2?.value
-
-			binding.infoTitle3.text = row.infoItem3?.label
-			binding.infoValue3.text = row.infoItem3?.value
+			// Hide left sidebar info items - now in grouped metadata
+			binding.infoTitle1.isVisible = false
+			binding.infoValue1.isVisible = false
+			binding.infoTitle2.isVisible = false
+			binding.infoValue2.isVisible = false
+			binding.infoTitle3.isVisible = false
+			binding.infoValue3.isVisible = false
 
 			binding.mainImage.load(row.imageDrawable, null, null, 1.0, 0)
+
+			// Set tagline
+			val tagline = row.item.taglines?.firstOrNull()
+			binding.fdTagline.isVisible = !tagline.isNullOrBlank()
+			binding.fdTagline.text = tagline
 
 			setSummary(row.summary)
 
 			if (row.item.type == BaseItemKind.PERSON) {
 				binding.fdSummaryText.maxLines = 9
-				binding.fdGenreRow.isVisible = false
 			}
+
+			// Populate grouped metadata
+			populateGroupedMetadata(row)
 
 			binding.fdButtonRow.removeAllViews()
 			for (button in row.actions) {
@@ -49,6 +59,56 @@ class MyDetailsOverviewRowPresenter(
 
 				binding.fdButtonRow.addView(button)
 			}
+		}
+
+		private fun populateGroupedMetadata(row: MyDetailsOverviewRow) {
+			val item = row.item
+
+			// Genres group
+			val genres = item.genres?.joinToString(", ")
+			binding.fdGenresGroup.isVisible = !genres.isNullOrBlank()
+			binding.fdGenresContent.text = genres
+
+			// Director group
+			val director = item.people?.filter { it.type == PersonKind.DIRECTOR }?.joinToString(", ") { it.name ?: "" }
+			binding.fdDirectorGroup.isVisible = !director.isNullOrBlank()
+			binding.fdDirectorContent.text = director
+
+			// Writers group
+			val writers = item.people?.filter { it.type == PersonKind.WRITER }?.joinToString(", ") { it.name ?: "" }
+			binding.fdWritersGroup.isVisible = !writers.isNullOrBlank()
+			binding.fdWritersContent.text = writers
+
+			// Studios group
+			val studios = item.studios?.joinToString(", ") { it.name ?: "" }
+			binding.fdStudiosGroup.isVisible = !studios.isNullOrBlank()
+			binding.fdStudiosContent.text = studios
+
+			// Runs group (runtime)
+			val runs = item.runTimeTicks?.let {
+				val totalMinutes = (it / 600000000).toInt()
+				val hours = totalMinutes / 60
+				val minutes = totalMinutes % 60
+				if (hours > 0) "${hours}h ${minutes}min" else "${minutes}min"
+			}
+			binding.fdRunsGroup.isVisible = !runs.isNullOrBlank()
+			binding.fdRunsContent.text = runs
+
+			// Ends group (calculated end time if watched now, or actual end time for live TV)
+			val ends = if (item.endDate != null) {
+				// For live TV, show actual end time
+				item.endDate?.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+			} else {
+				// For movies/shows, calculate end time based on current time + runtime
+				item.runTimeTicks?.let {
+					val now = java.time.LocalDateTime.now()
+					val runtimeMinutes = (it / 600000000).toInt()
+					val endTime = now.plusMinutes(runtimeMinutes.toLong())
+					endTime.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+				}
+			}
+			binding.fdEndsGroup.isVisible = !ends.isNullOrBlank()
+			binding.fdEndsContent.text = ends
 		}
 
 		fun setTitle(title: String?) {

@@ -6,6 +6,9 @@ plugins {
 	alias(libs.plugins.aboutlibraries)
 }
 
+import java.util.Properties
+import java.io.FileInputStream
+
 android {
 	namespace = "org.jellyfin.androidtv"
 	compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -30,8 +33,29 @@ android {
 		isCoreLibraryDesugaringEnabled = true
 	}
 
+	signingConfigs {
+		create("release") {
+			// Load keystore properties from keystore.properties file
+			val keystorePropertiesFile = rootProject.file("keystore.properties")
+			if (keystorePropertiesFile.exists()) {
+				val keystoreProperties = Properties()
+				keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+				
+				storeFile = file(keystoreProperties["storeFile"] as String)
+				storePassword = keystoreProperties["storePassword"] as String
+				keyAlias = keystoreProperties["keyAlias"] as String
+				keyPassword = keystoreProperties["keyPassword"] as String
+			}
+		}
+	}
+
 	buildTypes {
 		release {
+			// Use signing config if available
+			if (signingConfigs.names.contains("release")) {
+				signingConfig = signingConfigs.getByName("release")
+			}
+			
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
 			// Set package names used in various XML files
@@ -73,7 +97,7 @@ android {
 	}
 }
 
-base.archivesName.set("jellyfin-androidtv-v${project.getVersionName()}")
+base.archivesName.set("moonfin-androidtv-v${project.getVersionName()}")
 
 tasks.register("versionTxt") {
 	val path = layout.buildDirectory.asFile.get().resolve("version.txt")

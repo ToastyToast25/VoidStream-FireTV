@@ -4,93 +4,143 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.foundation.focusGroup
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
-import androidx.compose.ui.focus.focusRequester
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.compose.ui.platform.ComposeView
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.compose.AndroidFragment
-import androidx.fragment.compose.content
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import coil3.load
+import coil3.request.crossfade
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import org.jellyfin.androidtv.auth.repository.ServerRepository
-import org.jellyfin.androidtv.auth.repository.SessionRepository
-import org.jellyfin.androidtv.data.repository.NotificationsRepository
-import org.jellyfin.androidtv.ui.base.JellyfinTheme
+import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
 import org.koin.android.ext.android.inject
 
 class HomeFragment : Fragment() {
-	private val sessionRepository by inject<SessionRepository>()
-	private val serverRepository by inject<ServerRepository>()
-	private val notificationRepository by inject<NotificationsRepository>()
+	private val mediaBarViewModel by inject<MediaBarSlideshowViewModel>()
+
+	private var titleView: TextView? = null
+	private var logoView: ImageView? = null
+	private var infoRowView: SimpleInfoRowView? = null
+	private var summaryView: TextView? = null
+	private var backgroundImage: ImageView? = null
 
 	override fun onCreateView(
 		inflater: LayoutInflater,
 		container: ViewGroup?,
 		savedInstanceState: Bundle?
-	) = content {
-		val rowsFocusRequester = remember { FocusRequester() }
-		LaunchedEffect(rowsFocusRequester) { rowsFocusRequester.requestFocus() }
+	): View {
+		val view = inflater.inflate(R.layout.fragment_home, container, false)
 
-		JellyfinTheme {
-			Column {
-				MainToolbar(MainToolbarActiveButton.Home)
+		// Get references to views
+		titleView = view.findViewById(R.id.title)
+		logoView = view.findViewById(R.id.logo)
+		infoRowView = view.findViewById(R.id.infoRow)
+		summaryView = view.findViewById(R.id.summary)
+		backgroundImage = view.findViewById(R.id.backgroundImage)
 
-				// The leanback code has its own awful focus handling that doesn't work properly with Compose view inteop to workaround this
-				// issue we add custom behavior that only allows focus exit when the current selected row is the first one. Additionally when
-				// we do switch the focus, we reset the leanback state so it won't cause weird behavior when focus is regained
-				var rowsSupportFragment by remember { mutableStateOf<HomeRowsFragment?>(null) }
-				AndroidFragment<HomeRowsFragment>(
-					modifier = Modifier
-						.focusGroup()
-						.focusRequester(rowsFocusRequester)
-						.focusProperties {
-							onExit = {
-								val isFirstRowSelected = rowsSupportFragment?.selectedPosition?.let { it <= 0 } ?: false
-								if (requestedFocusDirection != FocusDirection.Up || !isFirstRowSelected) {
-									cancelFocusChange()
-								} else {
-									rowsSupportFragment?.selectedPosition = 0
-									rowsSupportFragment?.verticalGridView?.clearFocus()
-								}
-							}
-						}
-						.fillMaxSize(),
-					onUpdate = { fragment ->
-						rowsSupportFragment = fragment
-					}
-				)
-			}
+		// Setup toolbar Compose
+		val toolbarView = view.findViewById<ComposeView>(R.id.toolbar)
+		toolbarView.setContent {
+			MainToolbar(
+				activeButton = MainToolbarActiveButton.Home
+			)
 		}
+
+		return view
 	}
 
 	override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 		super.onViewCreated(view, savedInstanceState)
 
-		sessionRepository.currentSession
-			.flowWithLifecycle(viewLifecycleOwner.lifecycle, Lifecycle.State.STARTED)
-			.map { session ->
-				if (session == null) null
-				else serverRepository.getServer(session.serverId)
+		// Observe selected item state from HomeRowsFragment
+		val rowsFragment = childFragmentManager.findFragmentById(R.id.rowsFragment) as? HomeRowsFragment
+
+		rowsFragment?.selectedItemStateFlow
+			?.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+			?.onEach { state ->
+				// Update views directly - lightweight View updates (no Compose overhead)
+				titleView?.text = state.title
+				summaryView?.text = state.summary
+				
+				// Update info row with metadata - simple property assignment
+				infoRowView?.setItem(state.baseItem)
 			}
-			.onEach { server ->
-				notificationRepository.updateServerNotifications(server)
+			?.launchIn(lifecycleScope)
+
+		// Observe media bar focus state for background
+		mediaBarViewModel.isFocused
+			.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+			.onEach { isFocused ->
+				updateMediaBarBackground()
 			}
-			.launchIn(viewLifecycleOwner.lifecycleScope)
+			.launchIn(lifecycleScope)
+
+		// Observe playback state changes for background updates
+		mediaBarViewModel.playbackState
+			.flowWithLifecycle(lifecycle, Lifecycle.State.STARTED)
+			.onEach { playbackState ->
+				// Update background when current index changes
+				updateMediaBarBackground()
+			}
+			.launchIn(lifecycleScope)
+	}
+
+	private fun updateMediaBarBackground() {
+		val isFocused = mediaBarViewModel.isFocused.value
+		
+		if (isFocused) {
+			// Show background and logo when media bar is focused
+			val state = mediaBarViewModel.state.value
+			val playbackState = mediaBarViewModel.playbackState.value
+			
+			if (state is org.jellyfin.androidtv.ui.home.mediabar.MediaBarState.Ready) {
+				val currentItem = state.items.getOrNull(playbackState.currentIndex)
+				val backdropUrl = currentItem?.backdropUrl
+				val logoUrl = currentItem?.logoUrl
+				
+				// Update backdrop with smooth crossfade transition
+				if (backdropUrl != null) {
+					backgroundImage?.isVisible = true
+					backgroundImage?.load(backdropUrl) {
+						crossfade(400) // 400ms crossfade - faster and smoother
+					}
+				} else {
+					backgroundImage?.isVisible = false
+				}
+				
+				// Update logo with smooth crossfade - show logo if available, otherwise show title text
+				if (logoUrl != null) {
+					logoView?.isVisible = true
+					titleView?.isVisible = false
+					logoView?.load(logoUrl) {
+						crossfade(300) // 300ms crossfade - faster and smoother
+					}
+				} else {
+					logoView?.isVisible = false
+					titleView?.isVisible = true
+				}
+			}
+		} else {
+			// Hide background and logo when media bar loses focus, restore title
+			backgroundImage?.isVisible = false
+			logoView?.isVisible = false
+			titleView?.isVisible = true
+		}
+	}
+
+	override fun onDestroyView() {
+		super.onDestroyView()
+		titleView = null
+		logoView = null
+		summaryView = null
+		infoRowView = null
+		backgroundImage = null
 	}
 }

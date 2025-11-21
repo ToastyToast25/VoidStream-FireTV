@@ -94,6 +94,7 @@ public class CardPresenter extends Presenter {
         public void setItem(BaseRowItem m, ImageType imageType, int lHeight, int pHeight, int sHeight) {
             mItem = m;
             isUserView = false;
+            mCardView.setCircularImage(false); // Reset to default (square with rounded corners)
             switch (mItem.getBaseRowType()) {
 
                 case BaseItem:
@@ -119,6 +120,7 @@ public class CardPresenter extends Presenter {
                             showWatched = false;
                             break;
                         case PERSON:
+                            aspect = 1.0; // Force square aspect ratio for perfect circle
                             mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_person);
                             break;
                         case MUSIC_ARTIST:
@@ -224,6 +226,10 @@ public class CardPresenter extends Presenter {
                         mCardView.setProgress(0);
                     }
                     mCardView.setMainImageDimensions(cardWidth, cardHeight);
+                    // Make person images circular
+                    if (itemDto.getType() == BaseItemKind.PERSON) {
+                        mCardView.setCircularImage(true);
+                    }
                     break;
                 case LiveTvChannel:
                     org.jellyfin.sdk.model.api.BaseItemDto channel = mItem.getBaseItem();
@@ -273,8 +279,9 @@ public class CardPresenter extends Presenter {
                     break;
                 case Person:
                     cardHeight = !m.getStaticHeight() ? pHeight : sHeight;
-                    cardWidth = (int) (ImageHelper.ASPECT_RATIO_7_9 * cardHeight);
+                    cardWidth = cardHeight; // Make it square for perfect circle
                     mCardView.setMainImageDimensions(cardWidth, cardHeight);
+                    mCardView.setCircularImage(true);
                     mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_person);
                     break;
                 case Chapter:

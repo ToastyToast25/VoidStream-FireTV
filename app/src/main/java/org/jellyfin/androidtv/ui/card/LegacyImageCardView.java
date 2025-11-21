@@ -99,6 +99,15 @@ public class LegacyImageCardView extends BaseCardView {
         binding.resumeProgress.setLayoutParams(lp2);
     }
 
+    public void setCircularImage(boolean circular) {
+        if (circular) {
+            binding.mainImage.setBackgroundResource(R.drawable.shape_card_circle);
+            binding.mainImage.setClipToOutline(true);
+        } else {
+            binding.mainImage.setBackgroundResource(R.drawable.shape_card_image_background);
+        }
+    }
+
     public void setTitleText(CharSequence text) {
         if (binding.title == null) {
             return;

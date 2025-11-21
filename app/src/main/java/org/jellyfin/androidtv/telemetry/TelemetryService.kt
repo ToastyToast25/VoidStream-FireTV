@@ -69,7 +69,7 @@ object TelemetryService {
 			val connection = URL(url).openConnection() as HttpURLConnection
 			// Add authorization
 			val clientName = buildString {
-				append("Jellyfin Android TV")
+				append("Moonfin Android TV")
 				if (BuildConfig.DEBUG) append(" (debug)")
 			}
 			val authorization = AuthorizationHeaderBuilder.buildHeader(
@@ -94,10 +94,10 @@ object TelemetryService {
 			throw ReportSenderException("Unable to send crash report to server", e)
 		}
 
-		private fun CrashReportData.toReport(): String = buildMarkdown {
+			private fun CrashReportData.toReport(): String = buildMarkdown {
 			// Header
 			appendLine("---")
-			appendLine("client: Jellyfin for Android TV")
+			appendLine("client: Moonfin for Android TV")
 			appendLine("client_version: ${BuildConfig.VERSION_NAME}")
 			appendLine("client_repository: https://github.com/jellyfin/jellyfin-androidtv")
 			appendLine("type: crash_report")
