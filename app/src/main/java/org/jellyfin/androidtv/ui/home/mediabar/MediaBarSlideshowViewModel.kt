@@ -8,8 +8,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.repository.ItemMutationRepository
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.sdk.api.client.ApiClient
@@ -26,6 +30,7 @@ class MediaBarSlideshowViewModel(
 	private val api: ApiClient,
 	private val userSettingPreferences: UserSettingPreferences,
 	private val itemMutationRepository: ItemMutationRepository,
+	private val userRepository: UserRepository,
 ) : ViewModel() {
 	private val config = MediaBarConfig()
 
@@ -40,9 +45,23 @@ class MediaBarSlideshowViewModel(
 
 	private var items: List<MediaBarSlideItem> = emptyList()
 	private var autoAdvanceJob: Job? = null
+	private var currentUserId: UUID? = null
 
 	init {
 		loadSlideshowItems()
+		
+		// Observe user changes and reload content when user switches
+		userRepository.currentUser
+			.filterNotNull()
+			.onEach { user ->
+				// Check if user has actually changed (not just initial load)
+				if (currentUserId != null && currentUserId != user.id) {
+					Timber.i("MediaBar: User switched from $currentUserId to ${user.id}, reloading content")
+					reloadContent()
+				}
+				currentUserId = user.id
+			}
+			.launchIn(viewModelScope)
 	}
 
 	fun setFocused(focused: Boolean) {
@@ -160,6 +179,19 @@ class MediaBarSlideshowViewModel(
 	 */
 	private fun resetAutoAdvanceTimer() {
 		startAutoPlay()
+	}
+
+	/**
+	 * Reload slideshow content (e.g., when user switches profiles)
+	 */
+	fun reloadContent() {
+		Timber.d("MediaBar: Reloading slideshow content")
+		// Cancel auto-advance
+		autoAdvanceJob?.cancel()
+		// Reset playback state
+		_playbackState.value = SlideshowPlaybackState()
+		// Reload items
+		loadSlideshowItems()
 	}
 
 	/**

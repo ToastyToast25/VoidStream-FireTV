@@ -118,7 +118,6 @@ class MainActivity : FragmentActivity() {
 	}
 
 	private fun handleNavigationAction(action: NavigationAction) {
-		interactionTrackerViewModel.notifyInteraction(canCancel = true, userInitiated = false)
 
 		when (action) {
 			is NavigationAction.NavigateFragment -> binding.contentView.navigate(action)

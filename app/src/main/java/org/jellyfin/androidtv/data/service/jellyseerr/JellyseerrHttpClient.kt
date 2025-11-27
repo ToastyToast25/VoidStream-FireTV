@@ -21,6 +21,7 @@ import io.ktor.http.Url
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import timber.log.Timber
+import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 /**
@@ -35,13 +36,31 @@ class JellyseerrHttpClient(
 		private const val REQUEST_TIMEOUT_SECONDS = 30L
 		private const val JELLYSEERR_API_VERSION = "v1"
 		
-		// Shared persistent cookie storage across all instances
-		private var sharedCookieStorage: PersistentCookiesStorage? = null
+		// Delegating cookie storage that can switch between users
+		private var cookieStorage: DelegatingCookiesStorage? = null
+		private var appContext: android.content.Context? = null
 		
 		fun initializeCookieStorage(context: android.content.Context) {
-			if (sharedCookieStorage == null) {
-				sharedCookieStorage = PersistentCookiesStorage(context.applicationContext)
+			appContext = context.applicationContext
+			if (cookieStorage == null) {
+				cookieStorage = DelegatingCookiesStorage(context.applicationContext)
 			}
+		}
+
+		/**
+		 * Switch cookie storage to a different user
+		 * Each user gets their own cookie storage to maintain separate Jellyseerr sessions
+		 */
+		fun switchCookieStorage(userId: String) {
+			cookieStorage?.switchToUser(userId)
+			Timber.d("Jellyseerr: Switched cookie storage to user: $userId")
+		}
+
+		/**
+		 * Clear all stored cookies (e.g., for logout)
+		 */
+		suspend fun clearCookies() {
+			cookieStorage?.clearAll()
 		}
 	}
 	
@@ -74,8 +93,8 @@ class JellyseerrHttpClient(
 		}
 		
 		install(HttpCookies) {
-			// Use persistent cookie storage so cookies survive app restarts
-			storage = sharedCookieStorage!!
+			// Use delegating cookie storage that can switch between users
+			storage = cookieStorage!!
 		}
 
 		engine {
@@ -166,6 +185,9 @@ class JellyseerrHttpClient(
 		mediaType: String,
 		seasons: Seasons? = null,
 		is4k: Boolean = false,
+		profileId: Int? = null,
+		rootFolderId: Int? = null,
+		serverId: Int? = null,
 	): Result<JellyseerrRequestDto> = runCatching {
 		val url = URLBuilder("$baseUrl/api/v1/request").build()
 		
@@ -181,6 +203,9 @@ class JellyseerrHttpClient(
 			mediaType = mediaType,
 			seasons = seasonsValue,
 			is4k = is4k,
+			profileId = profileId,
+			rootFolderId = rootFolderId,
+			serverId = serverId,
 		)
 
 		val response = httpClient.post(url) {
@@ -189,7 +214,7 @@ class JellyseerrHttpClient(
 			setBody(requestBody)
 		}
 
-		Timber.d("Jellyseerr: Created request for $mediaType:$mediaId - Status: ${response.status}")
+		Timber.d("Jellyseerr: Created request for $mediaType:$mediaId (4K=$is4k, profileId=$profileId) - Status: ${response.status}")
 		
 		// Check if request was successful
 		if (response.status.value !in 200..299) {
@@ -419,12 +444,21 @@ class JellyseerrHttpClient(
 		limit: Int = 20,
 		offset: Int = 0,
 	): Result<JellyseerrDiscoverPageDto> = runCatching {
-		val url = URLBuilder("$baseUrl/api/v1/search").apply {
-			parameters.append("query", query)
-			parameters.append("page", ((offset / limit) + 1).toString())
-			if (mediaType != null) parameters.append("type", mediaType)
-		}.build()
-
+		// URLEncoder uses '+' for spaces, but Jellyseerr expects '%20'
+		val encodedQuery = URLEncoder.encode(query, "UTF-8").replace("+", "%20")
+		val page = ((offset / limit) + 1).toString()
+		
+		// Build URL with manually encoded query parameter
+		val url = buildString {
+			append("$baseUrl/api/v1/search")
+			append("?query=$encodedQuery")
+			append("&page=$page")
+			if (mediaType != null) {
+				val encodedType = URLEncoder.encode(mediaType, "UTF-8").replace("+", "%20")
+				append("&type=$encodedType")
+			}
+		}
+		
 		val response = httpClient.get(url) {
 			addAuthHeader()
 		}
@@ -469,6 +503,23 @@ class JellyseerrHttpClient(
 		response.body<JellyseerrDiscoverPageDto>()
 	}.onFailure { error ->
 		Timber.e(error, "Jellyseerr: Failed to get similar TV shows for TV show $tmdbId")
+	}
+
+	// ==================== Blacklist ====================
+
+	/**
+	 * Get blacklisted items
+	 */
+	suspend fun getBlacklist(): Result<JellyseerrBlacklistPageDto> = runCatching {
+		val url = "$baseUrl/api/v1/blacklist"
+		val response = httpClient.get(url) {
+			addAuthHeader()
+		}
+
+		Timber.d("Jellyseerr: Got blacklist - Status: ${response.status}")
+		response.body<JellyseerrBlacklistPageDto>()
+	}.onFailure { error ->
+		Timber.e(error, "Jellyseerr: Failed to get blacklist")
 	}
 
 	// ==================== Person ====================
@@ -599,18 +650,16 @@ class JellyseerrHttpClient(
 		
 		Timber.d("Jellyseerr: Jellyfin login attempt (no hostname) - Status: ${response.status}")
 		
-		// If we get 500 with "hostname already configured" error, that's expected
-		// If we get other errors, try with hostname for initial setup
-		if (response.status.value == 500) {
-			val errorBody = response.body<String>()
-			if (errorBody.contains("hostname already configured", ignoreCase = true)) {
-				Timber.e("Jellyseerr: Server already configured, but login still failed: $errorBody")
-				throw Exception("Jellyfin authentication failed. The server may not recognize these credentials.")
-			}
+		// If login was successful, return the result
+		if (response.status.value in 200..299) {
+			val user = response.body<JellyseerrUserDto>()
+			Timber.d("Jellyseerr: Login successful - User ID: ${user.id}, Username: ${user.username}")
+			return@runCatching user
 		}
 		
-		if (response.status.value !in 200..299) {
-			// Try again with hostname for initial setup
+		// If we get 401, the credentials might be wrong OR the server needs initial setup
+		// Try with hostname for initial setup
+		if (response.status.value == 401) {
 			Timber.d("Jellyseerr: Retrying with hostname for initial setup")
 			loginBody = mapOf(
 				"username" to username,
@@ -625,11 +674,25 @@ class JellyseerrHttpClient(
 			
 			Timber.d("Jellyseerr: Jellyfin login attempt (with hostname) - Status: ${response.status}")
 			
+			// If we get 500 with "hostname already configured", it means credentials are wrong
+			if (response.status.value == 500) {
+				val errorBody = response.body<String>()
+				if (errorBody.contains("hostname already configured", ignoreCase = true)) {
+					Timber.e("Jellyseerr: Server already configured, credentials incorrect")
+					throw Exception("Jellyfin authentication failed. Please check your username and password.")
+				}
+			}
+			
 			if (response.status.value !in 200..299) {
 				val errorBody = response.body<String>()
 				Timber.e("Jellyseerr: Jellyfin login failed with status ${response.status}: $errorBody")
 				throw Exception("Jellyfin login failed: ${response.status}")
 			}
+		} else {
+			// Some other error occurred on first attempt
+			val errorBody = response.body<String>()
+			Timber.e("Jellyseerr: Jellyfin login failed with status ${response.status}: $errorBody")
+			throw Exception("Jellyfin login failed: ${response.status}")
 		}
 		
 		// Parse the login response
@@ -645,7 +708,7 @@ class JellyseerrHttpClient(
 			
 			// Verify cookies were saved
 			val testUrl = URLBuilder(baseUrl).build()
-			val savedCookies = sharedCookieStorage?.get(testUrl)
+			val savedCookies = cookieStorage?.get(testUrl)
 			Timber.d("Jellyseerr: Verified ${savedCookies?.size ?: 0} cookies in persistent storage for $baseUrl")
 		}
 		
@@ -683,29 +746,32 @@ class JellyseerrHttpClient(
 	/**
 	 * Regenerate API key for the current user (requires active session)
 	 * This is useful to get a permanent API key after cookie-based Jellyfin auth
-	 * Uses the /settings/main/regenerate endpoint which returns MainSettings with the new API key
+	 * Uses the /api/v1/settings/main/regenerate endpoint which returns MainSettings with the new API key
 	 */
 	suspend fun regenerateApiKey(): Result<String> = runCatching {
 		val url = URLBuilder("$baseUrl/api/v1/settings/main/regenerate").build()
+		
 		val response = httpClient.post(url) {
 			// Use cookie auth to regenerate API key (don't send X-Api-Key header)
 			// The cookie from loginJellyfin is automatically sent by HttpCookies plugin
+			// Don't set body at all - EmptyContent by default (Content-Length: 0, no Content-Type)
+			
+			// Add browser-like headers to match Swagger request
+			header("User-Agent", "Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Safari/537.36")
+			header("Origin", baseUrl)
+			header("Referer", "$baseUrl/")
 		}
-		
-		Timber.d("Jellyseerr: Regenerate API key - Status: ${response.status}")
 		
 		if (response.status.value !in 200..299) {
 			val errorBody = response.body<String>()
-			Timber.e("Jellyseerr: Failed to regenerate API key: $errorBody")
-			throw Exception("Failed to regenerate API key: ${response.status}")
+			throw Exception("Failed to regenerate API key (requires admin): ${response.status}")
 		}
 		
 		val mainSettings = response.body<JellyseerrMainSettingsDto>()
 		val newApiKey = mainSettings.apiKey
-		Timber.d("Jellyseerr: API key regenerated successfully - Key length: ${newApiKey.length}")
 		newApiKey
 	}.onFailure { error ->
-		Timber.e(error, "Jellyseerr: Failed to regenerate API key")
+		Timber.e(error, "Jellyseerr: API key regeneration failed with exception")
 	}
 
 	// ==================== Status & Configuration ====================
@@ -735,6 +801,54 @@ class JellyseerrHttpClient(
 		response.status.value in 200..299
 	}.onFailure { error ->
 		Timber.e(error, "Jellyseerr: Connection test failed")
+	}
+
+	// ==================== Service Configuration ====================
+
+	/**
+	 * Get all Radarr server configurations
+	 * Returns list of Radarr instances with their profiles and root folders
+	 */
+	suspend fun getRadarrSettings(): Result<List<JellyseerrRadarrSettingsDto>> = runCatching {
+		val url = URLBuilder("$baseUrl/api/v1/settings/radarr").build()
+		val response = httpClient.get(url) {
+			addAuthHeader()
+		}
+		
+		Timber.d("Jellyseerr: Got Radarr settings - Status: ${response.status}")
+		
+		if (response.status.value !in 200..299) {
+			val errorBody = response.body<String>()
+			Timber.e("Jellyseerr: getRadarrSettings failed with status ${response.status}: $errorBody")
+			throw Exception("Failed to get Radarr settings: ${response.status}")
+		}
+		
+		response.body<List<JellyseerrRadarrSettingsDto>>()
+	}.onFailure { error ->
+		Timber.e(error, "Jellyseerr: Failed to get Radarr settings")
+	}
+
+	/**
+	 * Get all Sonarr server configurations
+	 * Returns list of Sonarr instances with their profiles and root folders
+	 */
+	suspend fun getSonarrSettings(): Result<List<JellyseerrSonarrSettingsDto>> = runCatching {
+		val url = URLBuilder("$baseUrl/api/v1/settings/sonarr").build()
+		val response = httpClient.get(url) {
+			addAuthHeader()
+		}
+		
+		Timber.d("Jellyseerr: Got Sonarr settings - Status: ${response.status}")
+		
+		if (response.status.value !in 200..299) {
+			val errorBody = response.body<String>()
+			Timber.e("Jellyseerr: getSonarrSettings failed with status ${response.status}: $errorBody")
+			throw Exception("Failed to get Sonarr settings: ${response.status}")
+		}
+		
+		response.body<List<JellyseerrSonarrSettingsDto>>()
+	}.onFailure { error ->
+		Timber.e(error, "Jellyseerr: Failed to get Sonarr settings")
 	}
 
 	fun close() {

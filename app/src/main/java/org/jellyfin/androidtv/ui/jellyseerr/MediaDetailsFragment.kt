@@ -25,6 +25,8 @@ import coil3.asDrawable
 import coil3.request.ImageRequest
 import coil3.toBitmap
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
@@ -43,12 +45,17 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
 import kotlinx.serialization.json.Json
+import org.jellyfin.sdk.api.client.ApiClient
+import org.jellyfin.sdk.api.client.extensions.itemsApi
+import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.BaseItemKind
 
 class MediaDetailsFragment : Fragment() {
 	private val viewModel: JellyseerrViewModel by viewModel()
 	private val imageLoader: ImageLoader by inject()
 	private val backgroundService: BackgroundService by inject()
 	private val navigationRepository: NavigationRepository by inject()
+	private val apiClient: ApiClient by inject()
 	
 	private var selectedItem: JellyseerrDiscoverItemDto? = null
 	private var movieDetails: JellyseerrMovieDetailsDto? = null
@@ -56,6 +63,7 @@ class MediaDetailsFragment : Fragment() {
 	private var requestButton: View? = null
 	private var request4kButton: View? = null
 	private var trailerButton: View? = null
+	private var playInMoonfinButton: View? = null
 	private var castSection: View? = null
 	private var toolbarContainer: View? = null
 
@@ -440,6 +448,13 @@ class MediaDetailsFragment : Fragment() {
 			// Only HD declined
 			hdDeclined -> "HD DECLINED" to Color.parseColor("#EF4444") // red-500
 			
+			// Both HD and 4K blacklisted
+			status == 6 && status4k == 6 -> "HD + 4K BLACKLISTED" to Color.parseColor("#DC2626") // red-600
+			// Only 4K blacklisted
+			status4k == 6 -> "4K BLACKLISTED" to Color.parseColor("#DC2626") // red-600
+			// Only HD blacklisted
+			status == 6 -> "HD BLACKLISTED" to Color.parseColor("#DC2626") // red-600
+			
 			// Both HD and 4K available
 			status == 5 && status4k == 5 -> "HD + 4K AVAILABLE" to Color.parseColor("#22C55E") // green-500
 			// Only 4K available
@@ -467,6 +482,13 @@ class MediaDetailsFragment : Fragment() {
 			status4k == 2 -> "4K PENDING" to Color.parseColor("#EAB308") // yellow-500
 			// Only HD pending
 			status == 2 -> "HD PENDING" to Color.parseColor("#EAB308") // yellow-500
+			
+			// Both HD and 4K unknown
+			status == 1 && status4k == 1 -> "HD + 4K UNKNOWN" to Color.parseColor("#9CA3AF") // gray-400
+			// Only 4K unknown
+			status4k == 1 -> "4K UNKNOWN" to Color.parseColor("#9CA3AF") // gray-400
+			// Only HD unknown
+			status == 1 -> "HD UNKNOWN" to Color.parseColor("#9CA3AF") // gray-400
 			
 			// Not requested
 			else -> "NOT REQUESTED" to Color.parseColor("#6B7280") // gray-500
@@ -662,10 +684,30 @@ class MediaDetailsFragment : Fragment() {
 				LinearLayout.LayoutParams.WRAP_CONTENT,
 				LinearLayout.LayoutParams.WRAP_CONTENT
 			).apply {
+				marginEnd = 8.dp(context)
 				topMargin = buttonTopMargin
 			}
 		}
 		container.addView(trailerButton)
+		
+		// Play in Moonfin button (only show if available in library)
+		if (hdStatus == 5 || hdStatus == 4) {
+			playInMoonfinButton = TextUnderButton(requireContext()).apply {
+				setLabel("Play in Moonfin")
+				setIcon(R.drawable.ic_play)
+				setOnClickListener {
+					playInMoonfin()
+				}
+				id = View.generateViewId()
+				layoutParams = LinearLayout.LayoutParams(
+					LinearLayout.LayoutParams.WRAP_CONTENT,
+					LinearLayout.LayoutParams.WRAP_CONTENT
+				).apply {
+					topMargin = buttonTopMargin
+				}
+			}
+			container.addView(playInMoonfinButton)
+		}
 		
 		return container
 	}
@@ -1358,6 +1400,134 @@ class MediaDetailsFragment : Fragment() {
 		} catch (e: Exception) {
 			Timber.e(e, "Error opening trailer")
 			Toast.makeText(requireContext(), "Unable to open trailer", Toast.LENGTH_SHORT).show()
+		}
+	}
+	
+	private fun playInMoonfin() {
+		lifecycleScope.launch {
+			try {
+				// Get external IDs from movie or TV details
+				val externalIds = movieDetails?.externalIds ?: tvDetails?.externalIds
+				val tmdbId = externalIds?.tmdbId
+				val tvdbId = externalIds?.tvdbId
+				val imdbId = externalIds?.imdbId
+				val title = movieDetails?.title ?: tvDetails?.name ?: tvDetails?.title ?: selectedItem?.title ?: selectedItem?.name
+				val mediaType = movieDetails?.mediaType ?: tvDetails?.mediaType ?: selectedItem?.mediaType
+				
+				Timber.d("Searching for item in Jellyfin library - Title: $title, Type: $mediaType, TMDB: $tmdbId, TVDB: $tvdbId, IMDB: $imdbId")
+				
+				// Search for the item in Jellyfin library using provider IDs
+				val jellyfinItem = searchForItemByProviderIds(
+					tmdbId = tmdbId,
+					tvdbId = tvdbId,
+					imdbId = imdbId,
+					title = title,
+					mediaType = mediaType
+				)
+				
+				if (jellyfinItem != null) {
+					Timber.d("Found item in Jellyfin library: ${jellyfinItem.name} (${jellyfinItem.id})")
+					// Navigate to Moonfin details page
+					navigationRepository.navigate(Destinations.itemDetails(jellyfinItem.id))
+				} else {
+					Timber.w("Item not found in Jellyfin library")
+					Toast.makeText(requireContext(), "Item not found in your Moonfin library", Toast.LENGTH_SHORT).show()
+				}
+			} catch (e: Exception) {
+				Timber.e(e, "Failed to search for item in Moonfin")
+				Toast.makeText(requireContext(), "Error searching library", Toast.LENGTH_SHORT).show()
+			}
+		}
+	}
+	
+	/**
+	 * Search for an item in Jellyfin library by provider IDs (TMDB, TVDB, IMDB)
+	 * Falls back to title search if no provider ID matches found
+	 */
+	private suspend fun searchForItemByProviderIds(
+		tmdbId: Int?,
+		tvdbId: Int?,
+		imdbId: String?,
+		title: String?,
+		mediaType: String?
+	): BaseItemDto? = withContext(Dispatchers.IO) {
+		try {
+			// First try to search by title to get potential matches
+			if (title == null) {
+				Timber.w("No title available for search")
+				return@withContext null
+			}
+			
+			// Determine the correct Jellyfin item type based on Jellyseerr media type
+			val includeItemTypes = when (mediaType) {
+				"movie" -> setOf(BaseItemKind.MOVIE)
+				"tv" -> setOf(BaseItemKind.SERIES)
+				else -> setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES) // Search both if unknown
+			}
+			
+			val response by apiClient.itemsApi.getItems(
+				searchTerm = title,
+				includeItemTypes = includeItemTypes,
+				recursive = true,
+				limit = 50 // Get more results to check provider IDs
+			)
+			
+			Timber.d("Found ${response.items.size} items of type $mediaType matching title '$title'")
+			
+			// Try to match by provider IDs first (most accurate)
+			if (tmdbId != null) {
+				val tmdbMatch = response.items.firstOrNull { item ->
+					val itemTmdbId = item.providerIds?.get("Tmdb")
+					itemTmdbId != null && itemTmdbId == tmdbId.toString()
+				}
+				if (tmdbMatch != null) {
+					Timber.d("Matched by TMDB ID: ${tmdbMatch.name} (${tmdbMatch.id})")
+					return@withContext tmdbMatch
+				}
+			}
+			
+			if (tvdbId != null) {
+				val tvdbMatch = response.items.firstOrNull { item ->
+					val itemTvdbId = item.providerIds?.get("Tvdb")
+					itemTvdbId != null && itemTvdbId == tvdbId.toString()
+				}
+				if (tvdbMatch != null) {
+					Timber.d("Matched by TVDB ID: ${tvdbMatch.name} (${tvdbMatch.id})")
+					return@withContext tvdbMatch
+				}
+			}
+			
+			if (imdbId != null) {
+				val imdbMatch = response.items.firstOrNull { item ->
+					val itemImdbId = item.providerIds?.get("Imdb")
+					itemImdbId != null && itemImdbId == imdbId
+				}
+				if (imdbMatch != null) {
+					Timber.d("Matched by IMDB ID: ${imdbMatch.name} (${imdbMatch.id})")
+					return@withContext imdbMatch
+				}
+			}
+			
+			// Fallback to exact title match
+			val exactMatch = response.items.firstOrNull { item ->
+				item.name.equals(title, ignoreCase = true)
+			}
+			
+			if (exactMatch != null) {
+				Timber.d("Matched by exact title: ${exactMatch.name} (${exactMatch.id})")
+				return@withContext exactMatch
+			}
+			
+			// Last resort: return first result if it's a close match
+			val firstResult = response.items.firstOrNull()
+			if (firstResult != null) {
+				Timber.w("Using first search result as fallback: ${firstResult.name} (${firstResult.id})")
+			}
+			
+			firstResult
+		} catch (e: Exception) {
+			Timber.e(e, "Failed to search Jellyfin library")
+			null
 		}
 	}
 }

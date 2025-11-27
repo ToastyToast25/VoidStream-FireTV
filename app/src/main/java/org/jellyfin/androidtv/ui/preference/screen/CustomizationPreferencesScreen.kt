@@ -163,6 +163,15 @@ class CustomizationPreferencesScreen : OptionsFragment() {
 				
 				bind(userPreferences, UserPreferences.screensaverMode)
 			}
+
+			checkbox {
+				setTitle(R.string.pref_screensaver_dimming)
+				setContent(R.string.pref_screensaver_dimming_description)
+
+				bind(userPreferences, UserPreferences.screensaverDimming)
+
+				depends { userPreferences[UserPreferences.screensaverInAppEnabled] }
+			}
 		}
 
 		category {

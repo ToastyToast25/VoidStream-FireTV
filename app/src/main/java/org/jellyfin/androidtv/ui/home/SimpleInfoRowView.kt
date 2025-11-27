@@ -62,7 +62,7 @@ class SimpleInfoRowView @JvmOverloads constructor(
 		val ratingType = userPreferences[UserPreferences.defaultRatingType]
 		if (ratingType != RatingType.RATING_HIDDEN) {
 			item.communityRating?.let { rating ->
-				setItemText(index++, "⭐ ${String.format("%.1f", rating / 10f)}")
+				setItemText(index++, "⭐ ${String.format("%.1f", rating)}")
 			}
 		}
 		

@@ -14,6 +14,7 @@ import org.jellyfin.androidtv.data.repository.ItemMutationRepository
 import org.jellyfin.androidtv.data.repository.ItemRepository
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
+import org.jellyfin.androidtv.ui.playback.PrePlaybackTrackSelector
 import org.jellyfin.androidtv.util.TimeUtils
 import org.jellyfin.androidtv.util.apiclient.getSeriesOverview
 import org.jellyfin.androidtv.util.popupMenu
@@ -397,4 +398,76 @@ fun FullDetailsFragment.getLiveTvChannel(
 			callback(channel)
 		}
 	}
+}
+
+fun FullDetailsFragment.showAudioTrackSelector(
+	view: View,
+	baseItemDto: BaseItemDto,
+) {
+	val trackSelector by inject<PrePlaybackTrackSelector>()
+	val audioTracks = trackSelector.getAudioTracks(baseItemDto)
+	
+	if (audioTracks.isEmpty()) {
+		Toast.makeText(requireContext(), "No audio tracks available", Toast.LENGTH_SHORT).show()
+		return
+	}
+	
+	val selectedIndex = trackSelector.getSelectedAudioTrack(baseItemDto.id.toString())
+	
+	popupMenu(requireContext(), view) {
+		audioTracks.forEach { track ->
+			val displayName = trackSelector.getAudioTrackDisplayName(track)
+			val isSelected = track.index == selectedIndex
+			val label = if (isSelected) "✓ $displayName" else displayName
+			
+			item(label) {
+				trackSelector.setSelectedAudioTrack(baseItemDto.id.toString(), track.index)
+				Toast.makeText(requireContext(), "Audio: $displayName", Toast.LENGTH_SHORT).show()
+			}
+		}
+		
+		// Add "Default" option
+		val isDefault = selectedIndex == null
+		item(if (isDefault) "✓ Default" else "Default") {
+			trackSelector.setSelectedAudioTrack(baseItemDto.id.toString(), null)
+			Toast.makeText(requireContext(), "Audio: Default", Toast.LENGTH_SHORT).show()
+		}
+	}.show()
+}
+
+fun FullDetailsFragment.showSubtitleTrackSelector(
+	view: View,
+	baseItemDto: BaseItemDto,
+) {
+	val trackSelector by inject<PrePlaybackTrackSelector>()
+	val subtitleTracks = trackSelector.getSubtitleTracks(baseItemDto)
+	
+	val selectedIndex = trackSelector.getSelectedSubtitleTrack(baseItemDto.id.toString())
+	
+	popupMenu(requireContext(), view) {
+		// Add "None" option
+		val isNone = selectedIndex == -1
+		item(if (isNone) "✓ None" else "None") {
+			trackSelector.setSelectedSubtitleTrack(baseItemDto.id.toString(), -1)
+			Toast.makeText(requireContext(), "Subtitles: None", Toast.LENGTH_SHORT).show()
+		}
+		
+		subtitleTracks.forEach { track ->
+			val displayName = trackSelector.getSubtitleTrackDisplayName(track)
+			val isSelected = track.index == selectedIndex
+			val label = if (isSelected) "✓ $displayName" else displayName
+			
+			item(label) {
+				trackSelector.setSelectedSubtitleTrack(baseItemDto.id.toString(), track.index)
+				Toast.makeText(requireContext(), "Subtitles: $displayName", Toast.LENGTH_SHORT).show()
+			}
+		}
+		
+		// Add "Default" option
+		val isDefault = selectedIndex == null
+		item(if (isDefault) "✓ Default" else "Default") {
+			trackSelector.setSelectedSubtitleTrack(baseItemDto.id.toString(), null)
+			Toast.makeText(requireContext(), "Subtitles: Default", Toast.LENGTH_SHORT).show()
+		}
+	}.show()
 }

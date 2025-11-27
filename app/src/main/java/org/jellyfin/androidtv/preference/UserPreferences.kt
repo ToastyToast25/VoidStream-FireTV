@@ -73,6 +73,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var showFavoritesButton = booleanPreference("pref_show_favorites_button", true)
 
 		/**
+		 * Show library buttons in toolbar
+		 */
+		var showLibrariesInToolbar = booleanPreference("pref_show_libraries_in_toolbar", true)
+
+		/**
 		 * Content type for shuffle button (movies, tv, or both)
 		 */
 		var shuffleContentType = stringPreference("pref_shuffle_content_type", "both")
@@ -232,6 +237,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 * Screensaver mode (library or logo)
 		 */
 		var screensaverMode = stringPreference("pref_screensaver_mode", "library")
+
+		/**
+		 * Apply screen dimming to the screensaver.
+		 */
+		var screensaverDimming = booleanPreference("pref_screensaver_dimming", false)
 
 		/**
 		 * Timeout before showing the screensaver in app, depends on [screensaverInAppEnabled].

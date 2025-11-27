@@ -80,6 +80,47 @@ data class JellyseerrUserDto(
 	val email: String? = null,
 	val avatar: String? = null,
 	val apiKey: String? = null,
+	val permissions: Int? = null, // Permission bitfield
+) {
+	// Jellyseerr permission constants (bitfield)
+	companion object {
+		const val PERMISSION_ADMIN = 1
+		const val PERMISSION_MANAGE_SETTINGS = 2
+		const val PERMISSION_MANAGE_USERS = 4
+		const val PERMISSION_MANAGE_REQUESTS = 8
+	}
+	
+	/**
+	 * Check if user has specific permission(s)
+	 */
+	fun hasPermission(permission: Int): Boolean {
+		return (permissions ?: 0) and permission != 0
+	}
+	
+	/**
+	 * Check if user is admin (has ADMIN or MANAGE_SETTINGS permission)
+	 */
+	fun isAdmin(): Boolean {
+		return hasPermission(PERMISSION_ADMIN) || hasPermission(PERMISSION_MANAGE_SETTINGS)
+	}
+}
+
+// ==================== Blacklist Models ====================
+
+@Serializable
+data class JellyseerrBlacklistPageDto(
+	val pageInfo: JellyseerrPageInfoDto? = null,
+	val results: List<JellyseerrBlacklistItemDto> = emptyList(),
+)
+
+@Serializable
+data class JellyseerrBlacklistItemDto(
+	val id: Int,
+	val mediaType: String, // "movie" or "tv"
+	val tmdbId: Int,
+	val title: String? = null,
+	val createdAt: String? = null,
+	val user: JellyseerrUserDto? = null,
 )
 
 // ==================== Discover/Trending Models ====================
@@ -164,6 +205,12 @@ data class JellyseerrDiscoverItemDto(
 	 * Check if this media is already available in the library
 	 */
 	fun isAvailable(): Boolean = mediaInfo?.status == 5 || mediaInfo?.status == 4
+	
+	/**
+	 * Check if this media has been blacklisted
+	 * Status 6 = blacklisted
+	 */
+	fun isBlacklisted(): Boolean = mediaInfo?.status == 6
 
 	companion object CREATOR : Parcelable.Creator<JellyseerrDiscoverItemDto> {
 		override fun createFromParcel(parcel: Parcel): JellyseerrDiscoverItemDto {
@@ -316,6 +363,9 @@ data class JellyseerrCreateRequestDto(
 	val tvdbId: Int? = null,
 	val imdbId: String? = null,
 	val is4k: Boolean = false,
+	val profileId: Int? = null, // Custom Radarr/Sonarr quality profile
+	val rootFolderId: Int? = null, // Custom root folder
+	val serverId: Int? = null, // Custom Radarr/Sonarr server instance
 )
 
 // Wrapper to support seasons as either array of ints or "all" string
@@ -376,4 +426,75 @@ data class JellyseerrStatusDto(
 data class JellyseerrAppDataDto(
 	val version: String? = null,
 	val initialized: Boolean = false,
+)
+
+// ==================== Service Configuration ====================
+
+@Serializable
+data class JellyseerrRadarrSettingsDto(
+	val id: Int,
+	val name: String,
+	val hostname: String,
+	val port: Int,
+	val apiKey: String,
+	val useSsl: Boolean = false,
+	val baseUrl: String? = null,
+	val activeProfileId: Int,
+	val activeProfileName: String,
+	val activeDirectory: String,
+	val activeAnimeProfileId: Int? = null,
+	val activeAnimeProfileName: String? = null,
+	val activeAnimeDirectory: String? = null,
+	val is4k: Boolean = false,
+	val minimumAvailability: String,
+	val isDefault: Boolean = false,
+	val externalUrl: String? = null,
+	val syncEnabled: Boolean = false,
+	val preventSearch: Boolean = false,
+	val tagRequests: Boolean = false,
+	val tags: List<Int> = emptyList(),
+	val profiles: List<JellyseerrQualityProfileDto> = emptyList(),
+	val rootFolders: List<JellyseerrRootFolderDto> = emptyList(),
+)
+
+@Serializable
+data class JellyseerrSonarrSettingsDto(
+	val id: Int,
+	val name: String,
+	val hostname: String,
+	val port: Int,
+	val apiKey: String,
+	val useSsl: Boolean = false,
+	val baseUrl: String? = null,
+	val activeProfileId: Int,
+	val activeProfileName: String,
+	val activeDirectory: String,
+	val activeAnimeProfileId: Int? = null,
+	val activeAnimeProfileName: String? = null,
+	val activeAnimeDirectory: String? = null,
+	val activeLanguageProfileId: Int? = null,
+	val is4k: Boolean = false,
+	val enableSeasonFolders: Boolean = false,
+	val isDefault: Boolean = false,
+	val externalUrl: String? = null,
+	val syncEnabled: Boolean = false,
+	val preventSearch: Boolean = false,
+	val tagRequests: Boolean = false,
+	val tags: List<Int> = emptyList(),
+	val profiles: List<JellyseerrQualityProfileDto> = emptyList(),
+	val rootFolders: List<JellyseerrRootFolderDto> = emptyList(),
+)
+
+@Serializable
+data class JellyseerrQualityProfileDto(
+	val id: Int,
+	val name: String,
+)
+
+@Serializable
+data class JellyseerrRootFolderDto(
+	val id: Int,
+	val path: String,
+	val freeSpace: Long? = null,
+	val totalSpace: Long? = null,
 )

@@ -59,17 +59,6 @@ class DiscoverFragment : Fragment() {
 				activeButton = MainToolbarActiveButton.Jellyseerr
 			)
 		}
-		
-		val toolbarContainer = view.findViewById<View>(R.id.toolbar_actions)
-		toolbarContainer?.apply {
-			isFocusable = true
-			isFocusableInTouchMode = false
-			setOnFocusChangeListener { _, hasFocus ->
-				if (hasFocus) {
-					toolbarView.requestFocus()
-				}
-			}
-		}
 
 		return view
 	}

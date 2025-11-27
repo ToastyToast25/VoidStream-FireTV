@@ -10,11 +10,47 @@ import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
 
 /**
+ * Delegating cookie storage that can switch between different user storages
+ * This allows the HTTP client to maintain the same CookiesStorage reference
+ * while the underlying storage changes when users switch
+ */
+class DelegatingCookiesStorage(private val context: Context) : CookiesStorage {
+	private var delegate: PersistentCookiesStorage = PersistentCookiesStorage(context, null)
+	private var currentUserId: String? = null
+	
+	fun switchToUser(userId: String) {
+		if (currentUserId != userId) {
+			Timber.i("DelegatingCookiesStorage: Switching from user '$currentUserId' to '$userId'")
+			currentUserId = userId
+			delegate = PersistentCookiesStorage(context, userId)
+		} else {
+			Timber.d("DelegatingCookiesStorage: Already using storage for user '$userId'")
+		}
+	}
+	
+	override suspend fun get(requestUrl: Url): List<Cookie> {
+		Timber.d("DelegatingCookiesStorage: Getting cookies for $requestUrl (current user: $currentUserId)")
+		return delegate.get(requestUrl)
+	}
+	
+	override suspend fun addCookie(requestUrl: Url, cookie: Cookie) {
+		Timber.d("DelegatingCookiesStorage: Adding cookie for $requestUrl (current user: $currentUserId)")
+		delegate.addCookie(requestUrl, cookie)
+	}
+	
+	override fun close() = delegate.close()
+	
+	suspend fun clearAll() = delegate.clearAll()
+}
+
+/**
  * Persistent cookie storage that saves cookies to SharedPreferences
  * This allows cookies to survive app restarts
+ * Each Jellyfin user gets their own cookie storage to maintain separate Jellyseerr sessions
  */
-class PersistentCookiesStorage(context: Context) : CookiesStorage {
-	private val preferences = context.getSharedPreferences("jellyseerr_cookies", Context.MODE_PRIVATE)
+class PersistentCookiesStorage(context: Context, userId: String? = null) : CookiesStorage {
+	private val prefsKey = if (userId != null) "jellyseerr_cookies_$userId" else "jellyseerr_cookies"
+	private val preferences = context.getSharedPreferences(prefsKey, Context.MODE_PRIVATE)
 	private val mutex = Mutex()
 	private val cookies = mutableMapOf<String, Cookie>()
 

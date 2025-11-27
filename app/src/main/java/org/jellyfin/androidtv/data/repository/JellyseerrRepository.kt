@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrBlacklistPageDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrCreateRequestDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverItemDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrDiscoverPageDto
@@ -13,7 +14,9 @@ import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrListResponse
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrMovieDetailsDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrPersonCombinedCreditsDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrPersonDetailsDto
+import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrRadarrSettingsDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrRequestDto
+import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrSonarrSettingsDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrTvDetailsDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrUserDto
 import org.jellyfin.androidtv.data.service.jellyseerr.Seasons
@@ -53,9 +56,20 @@ interface JellyseerrRepository {
 	suspend fun getTvDetails(tmdbId: Int): Result<JellyseerrTvDetailsDto>
 
 	/**
-	 * Authenticate with Jellyfin and get API key
+	 * Authenticate with Jellyfin SSO (cookie-based, 30-day expiration)
 	 */
 	suspend fun loginWithJellyfin(username: String, password: String, jellyfinUrl: String, jellyseerrUrl: String): Result<JellyseerrUserDto>
+
+	/**
+	 * Authenticate with local Jellyseerr credentials (returns API key for permanent auth)
+	 */
+	suspend fun loginLocal(email: String, password: String, jellyseerrUrl: String): Result<JellyseerrUserDto>
+
+	/**
+	 * Regenerate API key for current user (requires active session)
+	 * Use after Jellyfin login to get permanent API key instead of 30-day cookies
+	 */
+	suspend fun regenerateApiKey(): Result<String>
 
 	/**
 	 * Check if the current session is still valid (cookie-based auth)
@@ -86,6 +100,9 @@ interface JellyseerrRepository {
 		mediaType: String,
 		seasons: Seasons? = null,
 		is4k: Boolean = false,
+		profileId: Int? = null,
+		rootFolderId: Int? = null,
+		serverId: Int? = null,
 	): Result<JellyseerrRequestDto>
 
 	/**
@@ -180,6 +197,21 @@ interface JellyseerrRepository {
 	suspend fun getPersonCombinedCredits(personId: Int): Result<JellyseerrPersonCombinedCreditsDto>
 
 	/**
+	 * Get the blacklist
+	 */
+	suspend fun getBlacklist(): Result<JellyseerrBlacklistPageDto>
+
+	/**
+	 * Get all Radarr server configurations
+	 */
+	suspend fun getRadarrSettings(): Result<List<JellyseerrRadarrSettingsDto>>
+
+	/**
+	 * Get all Sonarr server configurations
+	 */
+	suspend fun getSonarrSettings(): Result<List<JellyseerrSonarrSettingsDto>>
+
+	/**
 	 * Cleanup resources
 	 */
 	fun close()
@@ -213,13 +245,14 @@ class JellyseerrRepositoryImpl(
 			try {
 				val serverUrl = preferences[JellyseerrPreferences.serverUrl]
 				val enabled = preferences[JellyseerrPreferences.enabled]
+				val storedApiKey = preferences[JellyseerrPreferences.apiKey] ?: ""
 
-			// Initialize with cookie-based Jellyfin auth (no API key needed)
-			if (enabled && !serverUrl.isNullOrEmpty()) {
-				Timber.d("Jellyseerr: Auto-initializing from saved preferences")
-				httpClient = JellyseerrHttpClient(context, serverUrl, "")
+				// Initialize with stored API key or cookie-based auth
+				if (enabled && !serverUrl.isNullOrEmpty()) {
+					Timber.d("Jellyseerr: Auto-initializing from saved preferences (API key: ${if (storedApiKey.isNotEmpty()) "present" else "absent, using cookies"})")
+					httpClient = JellyseerrHttpClient(context, serverUrl, storedApiKey)
 				
-				val connectionTest = httpClient?.testConnection()?.getOrNull() == true
+					val connectionTest = httpClient?.testConnection()?.getOrNull() == true
 					_isAvailable.emit(connectionTest)
 					initialized = true
 					Timber.d("Jellyseerr: Auto-initialized - Available: $connectionTest")
@@ -302,7 +335,116 @@ class JellyseerrRepositoryImpl(
 	override suspend fun loginWithJellyfin(username: String, password: String, jellyfinUrl: String, jellyseerrUrl: String): Result<JellyseerrUserDto> = withContext(Dispatchers.IO) {
 		// Create temporary client without API key for authentication
 		val tempClient = JellyseerrHttpClient(context, jellyseerrUrl, "")
-		tempClient.loginJellyfin(username, password, jellyfinUrl)
+		val result = tempClient.loginJellyfin(username, password, jellyfinUrl)
+		
+		result.onSuccess { user ->
+			// Successfully logged in with Jellyfin (cookie-based auth)
+			Timber.d("Jellyseerr: Jellyfin login successful, user: ${user.username}")
+			
+			// Check if auto API key generation is enabled
+			val autoGenerateApiKey = preferences[JellyseerrPreferences.autoGenerateApiKey]
+			
+			if (autoGenerateApiKey) {
+				Timber.d("Jellyseerr: Auto API key generation enabled, regenerating API key...")
+				
+				// Initialize with empty API key first (using cookies for auth)
+				initialize(jellyseerrUrl, "")
+				
+				// Try to regenerate API key to get permanent auth
+				val apiKeyResult = regenerateApiKey()
+				apiKeyResult.onSuccess { apiKey ->
+					Timber.d("Jellyseerr: Successfully generated permanent API key (length: ${apiKey.length})")
+					// Save the API key to preferences
+					preferences[JellyseerrPreferences.apiKey] = apiKey
+					preferences[JellyseerrPreferences.authMethod] = "jellyfin-apikey"
+				}.onFailure { error ->
+					Timber.w(error, "Jellyseerr: Failed to auto-generate API key - This requires ADMIN permissions")
+					Timber.w("Jellyseerr: Falling back to cookie-based auth (30-day expiration)")
+					// Keep using cookie-based auth
+					preferences[JellyseerrPreferences.authMethod] = "jellyfin"
+				}
+			} else {
+				Timber.d("Jellyseerr: Auto API key generation disabled, using cookie-based auth")
+				// Initialize client with empty API key (will use cookies)
+				initialize(jellyseerrUrl, "")
+				preferences[JellyseerrPreferences.authMethod] = "jellyfin"
+			}
+		}
+		
+		result
+	}
+
+	override suspend fun loginLocal(email: String, password: String, jellyseerrUrl: String): Result<JellyseerrUserDto> = withContext(Dispatchers.IO) {
+		Timber.i("Jellyseerr Repository: Starting local login for email: $email")
+		Timber.d("Jellyseerr Repository: Server URL: $jellyseerrUrl")
+		
+		// Create temporary client without API key for authentication
+		val tempClient = JellyseerrHttpClient(context, jellyseerrUrl, "")
+		Timber.d("Jellyseerr Repository: Created temporary HTTP client for authentication")
+		
+		val result = tempClient.loginLocal(email, password)
+		
+		result.onSuccess { user ->
+			// Successfully logged in with local credentials
+			val hasApiKey = !user.apiKey.isNullOrEmpty()
+			val apiKeyLength = user.apiKey?.length ?: 0
+			Timber.i("Jellyseerr Repository: Local login successful - User: ${user.username}, Has API key: $hasApiKey (length: $apiKeyLength)")
+			
+			// Initialize client with the API key from response
+			val apiKey = user.apiKey ?: ""
+			if (apiKey.isEmpty()) {
+				Timber.w("Jellyseerr Repository: Login succeeded but no API key returned")
+			}
+			
+			Timber.d("Jellyseerr Repository: Initializing client with returned API key")
+			initialize(jellyseerrUrl, apiKey)
+			
+			// Save credentials and API key to preferences
+			Timber.d("Jellyseerr Repository: Saving authentication data to preferences")
+			preferences[JellyseerrPreferences.authMethod] = "local"
+			preferences[JellyseerrPreferences.localEmail] = email
+			preferences[JellyseerrPreferences.localPassword] = password
+			preferences[JellyseerrPreferences.apiKey] = apiKey
+			Timber.i("Jellyseerr Repository: Local login completed successfully")
+		}.onFailure { error ->
+			Timber.e(error, "Jellyseerr Repository: Local login failed")
+		}
+		
+		result
+	}
+
+	override suspend fun regenerateApiKey(): Result<String> = withContext(Dispatchers.IO) {
+		Timber.i("Jellyseerr Repository: Starting API key regeneration")
+		ensureInitialized()
+
+		val client = httpClient ?: run {
+			Timber.e("Jellyseerr Repository: Cannot regenerate API key - client not initialized")
+			return@withContext Result.failure(IllegalStateException("Jellyseerr not initialized"))
+		}
+
+		Timber.d("Jellyseerr Repository: Calling HTTP client regenerateApiKey()")
+		val result = client.regenerateApiKey()
+		
+		result.onSuccess { apiKey ->
+			Timber.i("Jellyseerr Repository: API key regenerated successfully (length: ${apiKey.length})")
+			
+			// Reinitialize the client with the new API key
+			val serverUrl = preferences[JellyseerrPreferences.serverUrl]
+			if (!serverUrl.isNullOrEmpty()) {
+				Timber.d("Jellyseerr Repository: Reinitializing client with new API key")
+				initialize(serverUrl, apiKey)
+				Timber.d("Jellyseerr Repository: Client reinitialized, saving new API key to preferences")
+				preferences[JellyseerrPreferences.apiKey] = apiKey
+				preferences[JellyseerrPreferences.authMethod] = "jellyfin-apikey"
+				Timber.i("Jellyseerr Repository: API key regeneration completed successfully")
+			} else {
+				Timber.w("Jellyseerr Repository: No server URL in preferences, cannot reinitialize client")
+			}
+		}.onFailure { error ->
+			Timber.e(error, "Jellyseerr Repository: API key regeneration failed")
+		}
+		
+		result
 	}
 
 	override suspend fun isSessionValid(): Result<Boolean> = withContext(Dispatchers.IO) {
@@ -347,6 +489,9 @@ class JellyseerrRepositoryImpl(
 		mediaType: String,
 		seasons: Seasons?,
 		is4k: Boolean,
+		profileId: Int?,
+		rootFolderId: Int?,
+		serverId: Int?,
 	): Result<JellyseerrRequestDto> = withContext(Dispatchers.IO) {
 		ensureInitialized()
 
@@ -354,7 +499,7 @@ class JellyseerrRepositoryImpl(
 			return@withContext Result.failure(IllegalStateException("Jellyseerr not initialized"))
 		}
 
-		client.createRequest(mediaId, mediaType, seasons, is4k)
+		client.createRequest(mediaId, mediaType, seasons, is4k, profileId, rootFolderId, serverId)
 	}
 
 	override suspend fun deleteRequest(requestId: Int): Result<Unit> = withContext(Dispatchers.IO) {
@@ -511,6 +656,36 @@ class JellyseerrRepositoryImpl(
 		}
 
 		client.getPersonCombinedCredits(personId)
+	}
+
+	override suspend fun getBlacklist(): Result<JellyseerrBlacklistPageDto> = withContext(Dispatchers.IO) {
+		ensureInitialized()
+
+		val client = httpClient ?: run {
+			return@withContext Result.failure(IllegalStateException("Jellyseerr not initialized"))
+		}
+
+		client.getBlacklist()
+	}
+
+	override suspend fun getRadarrSettings(): Result<List<JellyseerrRadarrSettingsDto>> = withContext(Dispatchers.IO) {
+		ensureInitialized()
+
+		val client = httpClient ?: run {
+			return@withContext Result.failure(IllegalStateException("Jellyseerr not initialized"))
+		}
+
+		client.getRadarrSettings()
+	}
+
+	override suspend fun getSonarrSettings(): Result<List<JellyseerrSonarrSettingsDto>> = withContext(Dispatchers.IO) {
+		ensureInitialized()
+
+		val client = httpClient ?: run {
+			return@withContext Result.failure(IllegalStateException("Jellyseerr not initialized"))
+		}
+
+		client.getSonarrSettings()
 	}
 
 	override fun close() {

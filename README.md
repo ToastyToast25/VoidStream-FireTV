@@ -23,20 +23,25 @@ Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted 
 **The first and only Jellyfin client with native Jellyseerr support!**
 - Browse trending, popular, and recommended movies/TV shows from TMDB
 - Request content in HD or 4K with a single button press
+- **NSFW Content Filtering** - Automatically filters adult content using TMDB flags, keyword detection, and server blacklist integration (configurable in settings)
+- **Quality Profile Selection** - Choose specific quality profiles (4K, 1080p, etc.) when making requests
 - Smart season selection for TV shows where you pick exactly which seasons you want
 - Track all your requests (pending, approved, available) in one place
-- Seamless authentication using your Jellyfin credentials
+- Seamless authentication using your Jellyfin credentials with permanent local API keys
 - Global search integration with Jellyseerr results appearing automatically alongside your Jellyfin media
+- **Play in Moonfin Button** - Direct navigation from Jellyseerr to play available content in your library
 - Beautiful backdrop images for the Jellyseer discovery experience
 
 ### 🛠️ Customizable Toolbar
 - **Toggle buttons** - Show/hide Shuffle, Genres, and Favorites buttons
+- **Library row toggle** - Show/hide the entire library button row for a cleaner home screen
 - **Shuffle filter** - Choose Movies only, TV Shows only, or Both
 - **Pill-shaped design** - Subtle rounded background with better contrast
 - Dynamic library buttons that scroll horizontally for 5+ libraries
 
 ### 🎬 Featured Media Bar
 - Rotating showcase of 15 random movies and TV shows right on your home screen
+- **Profile-aware refresh** - Automatically refreshes content when switching profiles to prevent inappropriate content from appearing on child profiles
 - See ratings, genres, runtime, and a quick overview without extra clicks
 - Smooth crossfade transitions as items change, with matching backdrop images
 - Height and positioning tuned for viewing from the couch
@@ -48,6 +53,11 @@ Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted 
 - Dynamic library buttons automatically populate based on your Jellyfin libraries
 - One-click navigation to any library or collection directly from the toolbar
 - Cleaner icon-based design for frequently used actions
+
+### 🎵 Playback & Media Control
+- **Pre-Playback Track Selection** - Choose your preferred audio track and subtitle before playback starts (configurable in settings)
+- **Automatic Screensaver Dimming** - Reduces brightness after 90 seconds of playback inactivity to prevent screen burn-in
+- **OTA Update System** - Automatic check for new Moonfin versions with in-app update notifications
 
 ### 📊 Improved Details Screen
 - Metadata organized into clear sections: genres, directors, writers, studios, and runtime

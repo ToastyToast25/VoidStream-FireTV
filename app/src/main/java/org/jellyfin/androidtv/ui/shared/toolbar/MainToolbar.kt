@@ -64,6 +64,7 @@ import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.koin.compose.koinInject
 import timber.log.Timber
@@ -105,11 +106,13 @@ fun MainToolbar(
 	var showShuffleButton by remember { mutableStateOf(true) }
 	var showGenresButton by remember { mutableStateOf(true) }
 	var showFavoritesButton by remember { mutableStateOf(true) }
+	var showLibrariesInToolbar by remember { mutableStateOf(true) }
 	var shuffleContentType by remember { mutableStateOf("both") }
 	LaunchedEffect(Unit) {
 		showShuffleButton = userPreferences[UserPreferences.showShuffleButton] ?: true
 		showGenresButton = userPreferences[UserPreferences.showGenresButton] ?: true
 		showFavoritesButton = userPreferences[UserPreferences.showFavoritesButton] ?: true
+		showLibrariesInToolbar = userPreferences[UserPreferences.showLibrariesInToolbar] ?: true
 		shuffleContentType = userPreferences[UserPreferences.shuffleContentType] ?: "both"
 	}
 	
@@ -130,6 +133,7 @@ fun MainToolbar(
 		showShuffleButton = showShuffleButton,
 		showGenresButton = showGenresButton,
 		showFavoritesButton = showFavoritesButton,
+		showLibrariesInToolbar = showLibrariesInToolbar,
 		shuffleContentType = shuffleContentType,
 	)
 }
@@ -144,6 +148,7 @@ private fun MainToolbar(
 	showShuffleButton: Boolean = true,
 	showGenresButton: Boolean = true,
 	showFavoritesButton: Boolean = true,
+	showLibrariesInToolbar: Boolean = true,
 	shuffleContentType: String = "both",
 ) {
 	val focusRequester = remember { FocusRequester() }
@@ -262,6 +267,7 @@ private fun MainToolbar(
 						scope.launch {
 							try {
 								// Fetch random movie or TV show based on preference
+								// Note: We explicitly include only MOVIE and/or SERIES to exclude collections (BOX_SET)
 								val includeTypes = when (shuffleContentType) {
 									"movies" -> setOf(BaseItemKind.MOVIE)
 									"tv" -> setOf(BaseItemKind.SERIES)
@@ -271,9 +277,9 @@ private fun MainToolbar(
 								val randomItem = withContext(Dispatchers.IO) {
 									val response = api.itemsApi.getItems(
 										includeItemTypes = includeTypes,
-										excludeItemTypes = setOf(BaseItemKind.BOX_SET),
 										recursive = true,
 										sortBy = setOf(ItemSortBy.RANDOM),
+										filters = setOf(ItemFilter.IS_NOT_FOLDER),
 										limit = 1,
 									)
 									response.content.items?.firstOrNull()
@@ -317,28 +323,7 @@ private fun MainToolbar(
 			if (showFavoritesButton) {
 				IconButton(
 					onClick = {
-						scope.launch {
-							try {
-								// Navigate to favorites - using search with IS_FAVORITE filter for now
-								val favoritesItem = withContext(Dispatchers.IO) {
-									val response = api.itemsApi.getItems(
-										filters = setOf(org.jellyfin.sdk.model.api.ItemFilter.IS_FAVORITE),
-										recursive = true,
-										limit = 1,
-									)
-									response.content.items?.firstOrNull()
-								}
-								
-								if (favoritesItem != null) {
-									// Navigate to search or favorites view
-									navigationRepository.navigate(Destinations.search(""))
-								} else {
-									Timber.w("No favorites found")
-								}
-							} catch (e: Exception) {
-								Timber.e(e, "Failed to fetch favorites")
-							}
-						}
+						navigationRepository.navigate(Destinations.allFavorites)
 					},
 					colors = toolbarButtonColors,
 				) {
@@ -366,9 +351,11 @@ private fun MainToolbar(
 					contentDescription = "Jellyseerr Discover",
 				)
 			}
-		}			// Dynamic library buttons
-			ProvideTextStyle(JellyfinTheme.typography.default.copy(fontWeight = FontWeight.Bold)) {
-				userViews.forEach { library ->
+		}
+			// Dynamic library buttons (conditional)
+			if (showLibrariesInToolbar) {
+				ProvideTextStyle(JellyfinTheme.typography.default.copy(fontWeight = FontWeight.Bold)) {
+					userViews.forEach { library ->
 					val isActiveLibrary = activeButton == MainToolbarActiveButton.Library && 
 						activeLibraryId == library.id
 											Button(
@@ -384,6 +371,7 @@ private fun MainToolbar(
 					}
 				}
 			}
+		}
 		},
 		end = {
 			Row(

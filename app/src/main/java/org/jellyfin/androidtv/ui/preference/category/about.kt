@@ -14,8 +14,16 @@ fun OptionsScreen.aboutCategory() = category {
 		// Hardcoded strings for troubleshooting purposes
 		title = "Moonfin app version"
 		content = "moonfin-androidtv ${BuildConfig.VERSION_NAME} ${BuildConfig.BUILD_TYPE}"
+		icon = R.drawable.ic_moonfin
+	}
+
+	link {
+		// HReference to base Jellyfin app this build is based on
+		title = "Base Jellyfin app version"
+		content = "jellyfin-androidtv 0.19.4"
 		icon = R.drawable.ic_jellyfin
 	}
+
 
 	link {
 		setTitle(R.string.pref_device_model)

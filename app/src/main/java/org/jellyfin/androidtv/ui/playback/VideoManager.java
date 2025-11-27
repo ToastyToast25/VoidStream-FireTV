@@ -556,6 +556,21 @@ public class VideoManager {
         mExoPlayer.setPlaybackParameters(new PlaybackParameters(speed));
     }
 
+    public void setSubtitleDelay(long delayMs) {
+        if (!isInitialized()) {
+            Timber.w("Cannot set subtitle delay: player not initialized");
+            return;
+        }
+        Timber.d("Setting subtitle delay: %d ms", delayMs);
+
+        // TODO: Implement ExoPlayer subtitle delay
+        // ExoPlayer doesn't have a built-in subtitle delay API in stable versions
+        // Possible approaches:
+        // 1. Use a custom TextRenderer with time offset
+        // 2. Modify subtitle timestamps during parsing
+        // 3. Use CuesWithTiming and offset presentation times
+    }
+
     public void destroy() {
         mPlaybackControllerNotifiable = null;
         stopPlayback();

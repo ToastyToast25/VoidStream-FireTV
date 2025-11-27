@@ -25,6 +25,7 @@ import org.jellyfin.androidtv.preference.constant.StillWatchingBehavior;
 import org.jellyfin.androidtv.preference.constant.ZoomMode;
 import org.jellyfin.androidtv.ui.InteractionTrackerViewModel;
 import org.jellyfin.androidtv.ui.livetv.TvManager;
+import org.jellyfin.androidtv.ui.playback.PrePlaybackTrackSelector;
 import org.jellyfin.androidtv.util.TimeUtils;
 import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.apiclient.ReportingHelper;
@@ -67,6 +68,7 @@ public class PlaybackController implements PlaybackControllerNotifiable {
     private Lazy<DataRefreshService> dataRefreshService = inject(DataRefreshService.class);
     private Lazy<ReportingHelper> reportingHelper = inject(ReportingHelper.class);
     private final Lazy<InteractionTrackerViewModel> lazyInteractionTracker = inject(InteractionTrackerViewModel.class);
+    private Lazy<PrePlaybackTrackSelector> trackSelector = inject(PrePlaybackTrackSelector.class);
 
     List<BaseItemDto> mItems;
     VideoManager mVideoManager;
@@ -173,6 +175,11 @@ public class PlaybackController implements PlaybackControllerNotifiable {
 
     public boolean hasInitializedVideoManager() {
         return mVideoManager != null && mVideoManager.isInitialized();
+    }
+
+    @Nullable
+    public VideoManager getVideoManager() {
+        return mVideoManager;
     }
 
     public MediaSourceInfo getCurrentMediaSource() {
@@ -504,16 +511,24 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         internalOptions.setMediaSources(item.getMediaSources());
         if (playbackRetries > 0 || (isLiveTv && !directStreamLiveTv)) internalOptions.setEnableDirectPlay(false);
         if (playbackRetries > 1) internalOptions.setEnableDirectStream(false);
+        
+        // Check for pre-selected tracks from the details screen
+        String itemIdString = UUIDSerializerKt.toUUIDOrNull(item.getId().toString()).toString();
+        Integer preSelectedAudio = trackSelector.getValue().getSelectedAudioTrack(itemIdString);
+        Integer preSelectedSubtitle = trackSelector.getValue().getSelectedSubtitleTrack(itemIdString);
+        
         if (mCurrentOptions != null) {
             internalOptions.setSubtitleStreamIndex(mCurrentOptions.getSubtitleStreamIndex());
             internalOptions.setAudioStreamIndex(mCurrentOptions.getAudioStreamIndex());
         }
-        if (forcedSubtitleIndex != null) {
-            internalOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
-        }
-        MediaSourceInfo currentMediaSource = getCurrentMediaSource();
-        if (forcedAudioLanguage != null) {
-            // find the first audio stream with the requested language
+        
+        // Apply pre-selected audio track (takes priority over saved language preference)
+        if (preSelectedAudio != null && preSelectedAudio >= 0) {
+            Timber.i("Applying pre-selected audio track: %d", preSelectedAudio);
+            internalOptions.setAudioStreamIndex(preSelectedAudio);
+        } else if (forcedAudioLanguage != null) {
+            // fallback to language preference
+            MediaSourceInfo currentMediaSource = getCurrentMediaSource();
             for (MediaStream stream : currentMediaSource.getMediaStreams()) {
                 if (stream.getType() == MediaStreamType.AUDIO && forcedAudioLanguage.equals(stream.getLanguage())) {
                     internalOptions.setAudioStreamIndex(stream.getIndex());
@@ -521,6 +536,22 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                 }
             }
         }
+        
+        // Apply pre-selected subtitle track
+        if (preSelectedSubtitle != null) {
+            Timber.i("Applying pre-selected subtitle track: %d", preSelectedSubtitle);
+            internalOptions.setSubtitleStreamIndex(preSelectedSubtitle);
+        } else if (forcedSubtitleIndex != null) {
+            internalOptions.setSubtitleStreamIndex(forcedSubtitleIndex);
+        }
+        
+        // Clear pre-selections after applying them (one-time use)
+        if (preSelectedAudio != null || preSelectedSubtitle != null) {
+            Timber.i("Clearing track pre-selections for next playback");
+            trackSelector.getValue().clearSelections();
+        }
+        
+        MediaSourceInfo currentMediaSource = getCurrentMediaSource();
         if (!isLiveTv && currentMediaSource != null) {
             internalOptions.setMediaSourceId(currentMediaSource.getId());
         }

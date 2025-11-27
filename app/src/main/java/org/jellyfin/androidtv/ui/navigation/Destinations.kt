@@ -2,6 +2,7 @@ package org.jellyfin.androidtv.ui.navigation
 
 import kotlinx.serialization.json.Json
 import org.jellyfin.androidtv.constant.Extras
+import org.jellyfin.androidtv.ui.browsing.AllFavoritesFragment
 import org.jellyfin.androidtv.ui.browsing.AllGenresFragment
 import org.jellyfin.androidtv.ui.browsing.BrowseGridFragment
 import org.jellyfin.androidtv.ui.browsing.BrowseRecordingsFragment
@@ -73,6 +74,9 @@ object Destinations {
 
 	// All genres across all libraries
 	val allGenres = fragmentDestination<AllGenresFragment>()
+
+	// All favorites across all libraries
+	val allFavorites = fragmentDestination<AllFavoritesFragment>()
 
 	// TODO only pass item id instead of complete JSON to browsing destinations
 	fun libraryByGenres(item: BaseItemDto, includeType: String) =

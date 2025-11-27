@@ -180,6 +180,7 @@ class DetailsOverviewRowPresenter : RowPresenter() {
 				3 -> "Processing"
 				4 -> "Partially Available"
 				5 -> "Available"
+				6 -> "Blacklisted"
 				else -> null
 			}
 			if (!availabilityStatus.isNullOrBlank()) {

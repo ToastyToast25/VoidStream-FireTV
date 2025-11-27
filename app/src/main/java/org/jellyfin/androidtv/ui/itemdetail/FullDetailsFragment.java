@@ -813,7 +813,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 mDetailsOverviewRow.addAction(queueButton);
             }
 
-            if (Utils.getSafeValue(mBaseItem.isFolder(), false) || baseItem.getType() == BaseItemKind.MUSIC_ARTIST) {
+            if ((Utils.getSafeValue(mBaseItem.isFolder(), false) && baseItem.getType() != BaseItemKind.BOX_SET) || baseItem.getType() == BaseItemKind.MUSIC_ARTIST) {
                 shuffleButton = TextUnderButton.create(requireContext(), R.drawable.ic_shuffle, buttonSize, 2, getString(R.string.lbl_shuffle_all), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
@@ -831,6 +831,27 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                     }
                 });
                 mDetailsOverviewRow.addAction(imix);
+            }
+            
+            // Add audio track selector button for video content
+            if (baseItem.getType() == BaseItemKind.MOVIE 
+                    || baseItem.getType() == BaseItemKind.EPISODE 
+                    || baseItem.getType() == BaseItemKind.VIDEO) {
+                TextUnderButton audioButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_audio, buttonSize, 0, getString(R.string.lbl_audio_track), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        FullDetailsFragmentHelperKt.showAudioTrackSelector(FullDetailsFragment.this, v, mBaseItem);
+                    }
+                });
+                mDetailsOverviewRow.addAction(audioButton);
+                
+                TextUnderButton subtitleButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_subtitle, buttonSize, 0, getString(R.string.lbl_subtitle_track), new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        FullDetailsFragmentHelperKt.showSubtitleTrackSelector(FullDetailsFragment.this, v, mBaseItem);
+                    }
+                });
+                mDetailsOverviewRow.addAction(subtitleButton);
             }
         }
         //Video versions button

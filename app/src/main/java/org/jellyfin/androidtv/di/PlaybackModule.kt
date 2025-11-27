@@ -15,6 +15,7 @@ import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.browsing.MainActivity
 import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.ui.playback.PlaybackLauncher
+import org.jellyfin.androidtv.ui.playback.PrePlaybackTrackSelector
 import org.jellyfin.androidtv.ui.playback.VideoQueueManager
 import org.jellyfin.androidtv.ui.playback.rewrite.RewriteMediaManager
 import org.jellyfin.androidtv.util.profile.createDeviceProfile
@@ -38,6 +39,7 @@ val playbackModule = module {
 	single<MediaManager> { RewriteMediaManager(get(), get()) }
 
 	single { PlaybackLauncher(get(), get(), get(), get()) }
+	single { PrePlaybackTrackSelector(androidContext()) }
 
 	// OkHttp data source using OkHttpFactory from SDK
 	single<HttpDataSource.Factory> {

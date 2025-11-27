@@ -52,6 +52,13 @@ class UserPreferencesScreen : OptionsFragment() {
 				icon = R.drawable.ic_flask
 				withFragment<DeveloperPreferencesScreen>()
 			}
+
+			link {
+				setTitle(R.string.pref_updates_title)
+				setContent(R.string.pref_check_for_updates_description)
+				icon = R.drawable.ic_get_app
+				withFragment<UpdatePreferencesScreen>()
+			}
 		}
 
 		aboutCategory()

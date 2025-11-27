@@ -212,7 +212,7 @@ class SettingsFragment : Fragment(R.layout.fragment_jellyseerr_settings) {
 		}
 
 		android.app.AlertDialog.Builder(requireContext())
-			.setTitle("Connect with Jellyfin")
+			.setTitle("Login with Jellyfin")
 			.setView(layout)
 			.setPositiveButton("Connect") { _, _ ->
 				val password = passwordInput.text.toString().trim()

@@ -23,17 +23,6 @@ class HomePreferencesScreen : OptionsFragment() {
 		setTitle(R.string.home_prefs)
 
 		category {
-			setTitle(R.string.home_sections)
-
-			userSettingPreferences.homesections.forEachIndexed { index, section ->
-				enum<HomeSectionType> {
-					title = getString(R.string.home_section_i, index + 1)
-					bind(userSettingPreferences, section)
-				}
-			}
-		}
-
-		category {
 			setTitle(R.string.pref_toolbar_customization)
 
 			checkbox {
@@ -48,11 +37,17 @@ class HomePreferencesScreen : OptionsFragment() {
 				bind(userPreferences, UserPreferences.showGenresButton)
 			}
 
-			checkbox {
-				setTitle(R.string.pref_show_favorites_button)
-				setContent(R.string.pref_show_favorites_button_description)
-				bind(userPreferences, UserPreferences.showFavoritesButton)
-			}
+		checkbox {
+			setTitle(R.string.pref_show_favorites_button)
+			setContent(R.string.pref_show_favorites_button_description)
+			bind(userPreferences, UserPreferences.showFavoritesButton)
+		}
+
+		checkbox {
+			setTitle(R.string.pref_show_libraries_in_toolbar)
+			setContent(R.string.pref_show_libraries_in_toolbar_description)
+			bind(userPreferences, UserPreferences.showLibrariesInToolbar)
+		}
 
 		list {
 			setTitle(R.string.pref_shuffle_content_type)
@@ -65,5 +60,16 @@ class HomePreferencesScreen : OptionsFragment() {
 			bind(userPreferences, UserPreferences.shuffleContentType)
 		}
 	}
-}
+
+		category {
+			setTitle(R.string.home_sections)
+
+			userSettingPreferences.homesections.forEachIndexed { index, section ->
+				enum<HomeSectionType> {
+					title = getString(R.string.home_section_i, index + 1)
+					bind(userSettingPreferences, section)
+				}
+			}
+		}
+	}
 }

@@ -404,7 +404,7 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
                 play.requestFocus();
             }
 
-            if (mBaseItem.isFolder()) {
+            if (mBaseItem.isFolder() && mBaseItem.getType() != BaseItemKind.BOX_SET) {
                 TextUnderButton shuffle = TextUnderButton.create(requireContext(), R.drawable.ic_shuffle, buttonSize, 2, getString(R.string.lbl_shuffle_all), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {

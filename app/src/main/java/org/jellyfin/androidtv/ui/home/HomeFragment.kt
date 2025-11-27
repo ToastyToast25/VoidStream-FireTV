@@ -17,6 +17,7 @@ import coil3.request.crossfade
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.home.mediabar.MediaBarSlideshowViewModel
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
@@ -24,6 +25,7 @@ import org.koin.android.ext.android.inject
 
 class HomeFragment : Fragment() {
 	private val mediaBarViewModel by inject<MediaBarSlideshowViewModel>()
+	private val userSettingPreferences by inject<UserSettingPreferences>()
 
 	private var titleView: TextView? = null
 	private var logoView: ImageView? = null
@@ -52,19 +54,6 @@ class HomeFragment : Fragment() {
 			MainToolbar(
 				activeButton = MainToolbarActiveButton.Home
 			)
-		}
-		
-		// Make the toolbar container focusable and able to accept focus from D-pad navigation
-		val toolbarContainer = view.findViewById<View>(R.id.toolbar_actions)
-		toolbarContainer?.apply {
-			isFocusable = true
-			isFocusableInTouchMode = false
-			// When the container receives focus, delegate to the ComposeView
-			setOnFocusChangeListener { _, hasFocus ->
-				if (hasFocus) {
-					toolbarView.requestFocus()
-				}
-			}
 		}
 
 		return view
@@ -119,9 +108,12 @@ class HomeFragment : Fragment() {
 		val isFocused = mediaBarViewModel.isFocused.value
 		val selectedPosition = rowsFragment?.selectedPositionFlow?.value ?: -1
 		
+		// Check if the media bar is actually enabled in settings
+		val isMediaBarEnabled = userSettingPreferences.activeHomesections.contains(org.jellyfin.androidtv.constant.HomeSectionType.MEDIA_BAR)
+		
 		// Determine if we should show media bar content
-		// Show if: media bar is focused OR we're at position 0 (media bar row) OR position is -1 (toolbar/no selection)
-		val shouldShowMediaBar = isFocused || selectedPosition == 0 || selectedPosition == -1
+		// Show if: media bar is focused OR (we're at position 0 AND media bar is enabled) OR position is -1 (toolbar/no selection)
+		val shouldShowMediaBar = isFocused || (selectedPosition == 0 && isMediaBarEnabled) || selectedPosition == -1
 		
 		if (state is org.jellyfin.androidtv.ui.home.mediabar.MediaBarState.Ready && shouldShowMediaBar) {
 			val playbackState = mediaBarViewModel.playbackState.value

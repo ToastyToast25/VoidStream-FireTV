@@ -29,6 +29,7 @@ import org.jellyfin.androidtv.data.repository.NotificationsRepositoryImpl
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepositoryImpl
 import org.jellyfin.androidtv.data.service.BackgroundService
+import org.jellyfin.androidtv.data.service.UpdateCheckerService
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
 import org.jellyfin.androidtv.integration.dream.DreamViewModel
 import org.jellyfin.androidtv.ui.InteractionTrackerViewModel
@@ -157,9 +158,10 @@ val appModule = module {
 	viewModel { SearchViewModel(get(), get(), get()) }
 	viewModel { DreamViewModel(get(), get(), get(), get(), get()) }
 	viewModel { org.jellyfin.androidtv.ui.jellyseerr.JellyseerrViewModel(get(), get()) }
-	single { MediaBarSlideshowViewModel(get(), get(), get()) } // Singleton so both fragments share the same instance
+	single { MediaBarSlideshowViewModel(get(), get(), get(), get()) } // Singleton so both fragments share the same instance
 
 	single { BackgroundService(get(), get(), get(), get(), get()) }
+	single { UpdateCheckerService(get()) }
 
 	single { MarkdownRenderer(get()) }
 	single { ItemLauncher() }

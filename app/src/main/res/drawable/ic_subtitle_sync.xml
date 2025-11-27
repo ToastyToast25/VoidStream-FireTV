@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Scaled-down CC box -->
+    <group
+        android:scaleX="0.82"
+        android:scaleY="0.82"
+        android:translateX="2"
+        android:translateY="3">
+
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M19,4L5,4c-1.11,0 -2,0.9 -2,2v12c0,1.1 0.89,2 2,2h14c1.1,0 2,-0.9 2,-2L21,6c0,-1.1 -0.9,-2 -2,-2z
+                              M11,11L9.5,11v-0.5h-2v3h2L9.5,13L11,13v1c0,0.55 -0.45,1 -1,1L7,15c-0.55,0 -1,-0.45 -1,-1v-4
+                              c0,-0.55 0.45,-1 1,-1h3c0.55,0 1,0.45 1,1v1z
+                              M18,11h-1.5v-0.5h-2v3h2L16.5,13L18,13v1c0,0.55 -0.45,1 -1,1h-3c-0.55,0 -1,-0.45 -1,-1v-4
+                              c0,-0.55 0.45,-1 1,-1h3c0.55,0 1,0.45 1,1v1z" />
+    </group>
+
+    <!-- Scaled-down clock in top-right -->
+    <group
+        android:scaleX="0.3"
+        android:scaleY="0.3"
+        android:translateX="15"
+        android:translateY="0">
+
+        <!-- Clock outer + inner ring -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M11.99,2C6.47,2 2,6.48 2,12s4.47,10 9.99,10C17.52,22 22,17.52 22,12S17.52,2 11.99,2z
+                              M12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z" />
+
+        <!-- Clock hand -->
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M12.5,7H11v6l5.25,3.15 0.75,-1.23 -4.5,-2.67z" />
+    </group>
+
+</vector>

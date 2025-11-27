@@ -2,6 +2,8 @@ package org.jellyfin.androidtv
 
 import android.app.Application
 import android.content.Context
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.work.BackoffPolicy
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -11,11 +13,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.acra.ACRA
+import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.eventhandling.SocketHandler
 import org.jellyfin.androidtv.data.repository.NotificationsRepository
+import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrHttpClient
 import org.jellyfin.androidtv.integration.LeanbackChannelWorker
+import org.jellyfin.androidtv.preference.JellyseerrPreferences
+import org.jellyfin.androidtv.ui.background.UpdateCheckWorker
 import org.jellyfin.androidtv.telemetry.TelemetryService
 import org.koin.android.ext.android.inject
+import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
 @Suppress("unused")
@@ -28,6 +35,39 @@ class JellyfinApplication : Application() {
 
 		val notificationsRepository by inject<NotificationsRepository>()
 		notificationsRepository.addDefaultNotifications()
+		
+		// Monitor Jellyfin user changes and clear Jellyseerr cookies when user switches
+		setupJellyseerrUserMonitoring()
+	}
+	
+	private fun setupJellyseerrUserMonitoring() {
+		val userRepository by inject<UserRepository>()
+		val jellyseerrPreferences by inject<JellyseerrPreferences>()
+		
+		ProcessLifecycleOwner.get().lifecycleScope.launch {
+			userRepository.currentUser.collect { currentUser ->
+				val currentUsername = currentUser?.name
+				val currentUserId = currentUser?.id?.toString()
+				val lastJellyfinUser = jellyseerrPreferences[JellyseerrPreferences.lastJellyfinUser]
+				
+				Timber.d("Jellyseerr: User change detected - currentUser: $currentUsername (id: $currentUserId), lastUser: $lastJellyfinUser")
+				
+				// Switch cookie storage when user changes (each user gets their own Jellyseerr session)
+				if (currentUserId != null && currentUsername != null) {
+					if (lastJellyfinUser != null && lastJellyfinUser.isNotEmpty() && currentUsername != lastJellyfinUser) {
+						Timber.i("Jellyseerr: Jellyfin user switched from '$lastJellyfinUser' to '$currentUsername' (id: $currentUserId)")
+					} else {
+						Timber.d("Jellyseerr: Setting cookie storage for user '$currentUsername' (id: $currentUserId)")
+					}
+					// Switch to this user's cookie storage
+					JellyseerrHttpClient.switchCookieStorage(currentUserId)
+					// Update the stored username
+					jellyseerrPreferences[JellyseerrPreferences.lastJellyfinUser] = currentUsername
+				} else {
+					Timber.d("Jellyseerr: No current user or user ID is null")
+				}
+			}
+		}
 	}
 
 	/**
@@ -48,6 +88,15 @@ class JellyfinApplication : Application() {
 				ExistingPeriodicWorkPolicy.UPDATE,
 				PeriodicWorkRequestBuilder<LeanbackChannelWorker>(1, TimeUnit.HOURS)
 					.setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.MINUTES)
+					.build()
+			).await()
+
+			// Schedule update check worker (daily)
+			workManager.enqueueUniquePeriodicWork(
+				UpdateCheckWorker.WORK_NAME,
+				ExistingPeriodicWorkPolicy.KEEP,
+				PeriodicWorkRequestBuilder<UpdateCheckWorker>(1, TimeUnit.DAYS)
+					.setBackoffCriteria(BackoffPolicy.LINEAR, 1, TimeUnit.HOURS)
 					.build()
 			).await()
 		}
