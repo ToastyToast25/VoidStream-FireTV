@@ -100,6 +100,12 @@ fun FullDetailsFragment.showDetailsMenu(
 	if (goToSeriesButton?.isVisible == false) {
 		item(getString(R.string.lbl_goto_series)) { gotoSeries() }
 	}
+
+	if (mPrevButton?.isVisible == false && mPrevItemId != null) {
+		item(getString(R.string.lbl_previous_episode)) {
+			gotoPreviousEpisode()
+		}
+	}
 }.showIfNotEmpty()
 
 fun FullDetailsFragment.createFakeSeriesTimerBaseItemDto(timer: SeriesTimerInfoDto) = BaseItemDto(
@@ -224,7 +230,7 @@ fun FullDetailsFragment.populatePreviousButton() {
 			?.id
 
 		mPrevItemId = previousItem
-		mPrevButton.isVisible = previousItem != null
+		// Previous button is now in Other Options menu, so keep it hidden from main row
 
 		showMoreButtonIfNeeded()
 	}

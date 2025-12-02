@@ -5,6 +5,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
@@ -83,9 +84,9 @@ fun ItemRowAdapter.retrieveResumeItems(api: ApiClient, query: GetResumeItemsRequ
 				transform = { item, _ ->
 					BaseItemDtoBaseRowItem(
 						item = item,
-						// Continue Watching ignores seriesThumbnailsEnabled setting
-						// Episodes use primary image, movies use thumb/backdrop via preferThumbForMovies
-						preferParentThumb = false,
+						// When seriesThumbnailsEnabled is true, use wide thumbnails; otherwise use series poster
+						// Movies use thumb/backdrop via preferThumbForMovies
+						preferParentThumb = preferParentThumb,
 						staticHeight = isStaticHeight,
 						preferThumbForMovies = true
 					)
@@ -126,20 +127,20 @@ fun ItemRowAdapter.retrieveNextUpItems(api: ApiClient, query: GetNextUpRequest) 
 					addAll(episodesResponse.items)
 				}
 
-			setItems(
-				items = items,
-				transform = { item, _ ->
-					BaseItemDtoBaseRowItem(
-						item = item,
-						// When seriesThumbnailsEnabled is true, use wide thumbnails; otherwise use series poster
-						preferParentThumb = preferParentThumb,
-						staticHeight = false,
-						preferSeriesPoster = !preferParentThumb
-					)
-				}
-			)
+				setItems(
+					items = items,
+					transform = { item, _ ->
+						BaseItemDtoBaseRowItem(
+							item = item,
+							// When seriesThumbnailsEnabled is true, use wide thumbnails; otherwise use series poster
+							preferParentThumb = preferParentThumb,
+							staticHeight = false,
+							preferSeriesPoster = !preferParentThumb
+						)
+					}
+				)
 
-			if (items.isEmpty()) removeRow()
+				if (items.isEmpty()) removeRow()
 			} else {
 				setItems(
 					items = response.items,
@@ -156,6 +157,55 @@ fun ItemRowAdapter.retrieveNextUpItems(api: ApiClient, query: GetNextUpRequest) 
 
 				if (response.items.isEmpty()) removeRow()
 			}
+		}.fold(
+			onSuccess = { notifyRetrieveFinished() },
+			onFailure = { error -> notifyRetrieveFinished(error as? Exception) }
+		)
+	}
+}
+
+fun ItemRowAdapter.retrieveMergedContinueWatchingItems(
+	api: ApiClient,
+	resumeQuery: GetResumeItemsRequest,
+	nextUpQuery: GetNextUpRequest
+) {
+	ProcessLifecycleOwner.get().lifecycleScope.launch {
+		runCatching {
+			// Fetch both resume and next up items concurrently
+			val resumeDeferred = async(Dispatchers.IO) {
+				api.itemsApi.getResumeItems(resumeQuery).content.items
+			}
+			val nextUpDeferred = async(Dispatchers.IO) {
+				api.tvShowsApi.getNextUp(nextUpQuery).content.items
+			}
+
+			val resumeItems = resumeDeferred.await()
+			val nextUpItems = nextUpDeferred.await()
+
+			// Combine both lists, remove duplicates, and sort by last played date (most recent first)
+			// This matches Plex's "On Deck" behavior - chronological order by access time
+			val combinedItems = buildList {
+				addAll(resumeItems)
+				addAll(nextUpItems)
+			}.distinctBy { it.id } // Remove duplicates by ID
+				.sortedByDescending { item ->
+					// Handle null lastPlayedDate by using a very old date for sorting
+					item.userData?.lastPlayedDate ?: java.time.LocalDateTime.MIN
+				}
+
+			setItems(
+				items = combinedItems,
+				transform = { item, _ ->
+					BaseItemDtoBaseRowItem(
+						item = item,
+						preferParentThumb = preferParentThumb,
+						staticHeight = isStaticHeight,
+						preferThumbForMovies = true
+					)
+				}
+			)
+
+			if (combinedItems.isEmpty()) removeRow()
 		}.fold(
 			onSuccess = { notifyRetrieveFinished() },
 			onFailure = { error -> notifyRetrieveFinished(error as? Exception) }

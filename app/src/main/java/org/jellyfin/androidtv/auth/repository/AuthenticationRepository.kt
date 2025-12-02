@@ -88,6 +88,7 @@ class AuthenticationRepositoryImpl(
 	private fun authenticateCredential(server: Server, username: String, password: String) = flow {
 		val api = jellyfin.createApi(server.address, deviceInfo = defaultDeviceInfo.forUser(username))
 		val result = try {
+			// For users without passwords, pass empty string to the API
 			val response = api.userApi.authenticateUserByName(username, password)
 			response.content
 		} catch (err: TimeoutException) {

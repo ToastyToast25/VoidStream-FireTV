@@ -14,6 +14,7 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.playback.PlaybackControllerContainer
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import timber.log.Timber
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -89,6 +90,8 @@ class InteractionTrackerViewModel(
 	}
 
 	fun notifyInteraction(canCancel: Boolean, userInitiated: Boolean) {
+		Timber.d("Screensaver: notifyInteraction - canCancel=$canCancel, userInitiated=$userInitiated, locks=$locks, visible=${_screensaverVisible.value}")
+		
 		// Cancel pending screensaver timer (if any)
 		timer?.cancel()
 
@@ -100,15 +103,25 @@ class InteractionTrackerViewModel(
 
 		// Hide screensaver when interacted with allowed cancellation or when disabled
 		if (_screensaverVisible.value && (canCancel || !inAppEnabled || activityPaused)) {
+			Timber.d("Screensaver: Hiding screensaver")
 			_screensaverVisible.value = false
 		}
 
 		// Create new timer to show screensaver when enabled
-		if (inAppEnabled && !activityPaused && locks == 0) {
+		if (inAppEnabled && !activityPaused) {
+			Timber.d("Screensaver: Creating timer - enabled=$inAppEnabled, paused=$activityPaused, timeout=$timeout, locks=$locks")
 			timer = viewModelScope.launch {
 				delay(timeout)
-				_screensaverVisible.value = true
+				// Only show screensaver if no locks are active
+				if (locks == 0) {
+					Timber.d("Screensaver: Timer expired, showing screensaver")
+					_screensaverVisible.value = true
+				} else {
+					Timber.d("Screensaver: Timer expired but locks active: $locks")
+				}
 			}
+		} else {
+			Timber.d("Screensaver: NOT creating timer - enabled=$inAppEnabled, paused=$activityPaused, locks=$locks")
 		}
 
 		// Update KEEP_SCREEN_ON flag value
@@ -137,17 +150,25 @@ class InteractionTrackerViewModel(
 		}
 
 		fun activate() {
-			if (active) return
+			if (active) {
+				Timber.d("Screensaver: Lock already active, skipping")
+				return
+			}
 			lifecycle.addObserver(this)
 			locks++
+			Timber.d("Screensaver: Lock activated, locks now=$locks")
 			notifyInteraction(canCancel = true, userInitiated = false)
 			active = true
 		}
 
 		fun cancel() {
-			if (!active) return
+			if (!active) {
+				Timber.d("Screensaver: Lock not active, skipping cancel")
+				return
+			}
 			locks--
 			lifecycle.removeObserver(this)
+			Timber.d("Screensaver: Lock cancelled, locks now=$locks")
 			notifyInteraction(canCancel = false, userInitiated = false)
 			active = false
 		}

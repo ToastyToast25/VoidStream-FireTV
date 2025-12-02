@@ -29,6 +29,7 @@ public class BrowseRowDef {
     private GetArtistsRequest artistsQuery;
     private GetAlbumArtistsRequest albumArtistsQuery;
     private GetResumeItemsRequest resumeQuery;
+    private GetNextUpRequest mergedNextUpQuery; // For merged continue watching
     private GetSpecialsRequest specialsQuery;
     private QueryType queryType;
 
@@ -147,6 +148,17 @@ public class BrowseRowDef {
         this.changeTriggers = changeTriggers;
     }
 
+    // Constructor for merged Continue Watching + Next Up
+    public BrowseRowDef(String header, GetResumeItemsRequest resumeQuery, GetNextUpRequest nextUpQuery, boolean preferParentThumb, boolean staticHeight, ChangeTriggerType[] changeTriggers) {
+        headerText = header;
+        this.resumeQuery = resumeQuery;
+        this.mergedNextUpQuery = nextUpQuery;
+        this.queryType = QueryType.MergedContinueWatching;
+        this.staticHeight = staticHeight;
+        this.preferParentThumb = preferParentThumb;
+        this.changeTriggers = changeTriggers;
+    }
+
     public BrowseRowDef(String header, GetSpecialsRequest query) {
         headerText = header;
         this.specialsQuery = query;
@@ -197,6 +209,8 @@ public class BrowseRowDef {
     public GetSeriesTimersRequest getSeriesTimerQuery() { return seriesTimerQuery; }
 
     public GetResumeItemsRequest getResumeQuery() { return resumeQuery; }
+
+    public GetNextUpRequest getMergedNextUpQuery() { return mergedNextUpQuery; }
 
     public GetSpecialsRequest getSpecialsQuery() { return specialsQuery; }
 

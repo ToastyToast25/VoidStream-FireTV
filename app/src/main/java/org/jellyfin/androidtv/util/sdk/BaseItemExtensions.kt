@@ -127,7 +127,33 @@ fun BaseItemDto.getSubName(context: Context): String? = when (type) {
 				TimeUtils.getFriendlyDate(context, premiereDate)
 			)
 
-		else -> name
+		else -> {
+			// Show episode name with resolution if available
+			val resolutionStr = when {
+				height != null && height!! >= 2160 -> "4K"
+				height != null && height!! >= 1440 -> "1440p"
+				height != null && height!! >= 1080 -> "1080p"
+				height != null && height!! >= 720 -> "720p"
+				else -> {
+					// Try to get from media source
+					val mediaSource = mediaSources?.firstOrNull()
+					val videoStream = mediaSource?.mediaStreams?.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.VIDEO }
+					when {
+						videoStream?.height != null && videoStream.height!! >= 2160 -> "4K"
+						videoStream?.height != null && videoStream.height!! >= 1440 -> "1440p"
+						videoStream?.height != null && videoStream.height!! >= 1080 -> "1080p"
+						videoStream?.height != null && videoStream.height!! >= 720 -> "720p"
+						else -> null
+					}
+				}
+			}
+			
+			if (resolutionStr != null && name != null) {
+				"$name • $resolutionStr"
+			} else {
+				name
+			}
+		}
 	}
 
 	BaseItemKind.SEASON -> when {
@@ -149,7 +175,28 @@ fun BaseItemDto.getSubName(context: Context): String? = when (type) {
 			else -> null
 		}
 		val yearStr = productionYear?.toString()
-		listOfNotNull(typeStr, yearStr).joinToString(" • ")
+		
+		// Add resolution if available (from width/height or first media source)
+		val resolutionStr = when {
+			height != null && height!! >= 2160 -> "4K"
+			height != null && height!! >= 1440 -> "1440p"
+			height != null && height!! >= 1080 -> "1080p"
+			height != null && height!! >= 720 -> "720p"
+			else -> {
+				// Try to get from media source if direct properties not available
+				val mediaSource = mediaSources?.firstOrNull()
+				val videoStream = mediaSource?.mediaStreams?.firstOrNull { it.type == org.jellyfin.sdk.model.api.MediaStreamType.VIDEO }
+				when {
+					videoStream?.height != null && videoStream.height!! >= 2160 -> "4K"
+					videoStream?.height != null && videoStream.height!! >= 1440 -> "1440p"
+					videoStream?.height != null && videoStream.height!! >= 1080 -> "1080p"
+					videoStream?.height != null && videoStream.height!! >= 720 -> "720p"
+					else -> null
+				}
+			}
+		}
+		
+		listOfNotNull(typeStr, yearStr, resolutionStr).joinToString(" • ")
 	}
 	else -> officialRating
 }

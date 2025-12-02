@@ -151,10 +151,17 @@ public class CardPresenter extends Presenter {
                             }
                             break;
                         case EPISODE:
+                            showProgress = true;
                             if (m instanceof BaseItemDtoBaseRowItem && ((BaseItemDtoBaseRowItem) m).getPreferSeriesPoster()) {
+                                // Next Up with thumbnails disabled - use portrait poster
+                                mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_tv);
+                                aspect = ImageHelper.ASPECT_RATIO_2_3;
+                            } else if (m instanceof BaseItemDtoBaseRowItem && ((BaseItemDtoBaseRowItem) m).getPreferThumbForMovies() && !m.getPreferParentThumb()) {
+                                // Continue Watching with thumbnails disabled - use portrait poster
                                 mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_port_tv);
                                 aspect = ImageHelper.ASPECT_RATIO_2_3;
                             } else {
+                                // Wide thumbnail mode
                                 mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_land_tv);
                                 aspect = ImageHelper.ASPECT_RATIO_16_9;
                                 if (itemDto.getLocationType() != null) {
@@ -168,7 +175,6 @@ public class CardPresenter extends Presenter {
                                             break;
                                     }
                                 }
-                                showProgress = true;
                                 //Always show info for episodes
                                 mCardView.setCardType(BaseCardView.CARD_TYPE_INFO_UNDER);
                             }
@@ -200,7 +206,8 @@ public class CardPresenter extends Presenter {
                             showProgress = true;
                             // Use landscape thumb for movies in Continue Watching row (preferThumbForMovies)
                             // OR when preferParentThumb setting is enabled and we have a backdrop
-                            if (m instanceof BaseItemDtoBaseRowItem && ((BaseItemDtoBaseRowItem) m).getPreferThumbForMovies()) {
+                            if (m instanceof BaseItemDtoBaseRowItem && ((BaseItemDtoBaseRowItem) m).getPreferThumbForMovies() && m.getPreferParentThumb()) {
+                                // Continue Watching with thumbnails enabled
                                 mDefaultCardImage = ContextCompat.getDrawable(mCardView.getContext(), R.drawable.tile_land_tv);
                                 aspect = ImageHelper.ASPECT_RATIO_16_9;
                                 mCardView.setCardType(BaseCardView.CARD_TYPE_INFO_UNDER);
@@ -410,30 +417,42 @@ public class CardPresenter extends Presenter {
             } else if (aspect == ImageHelper.ASPECT_RATIO_2_3 && rowItem.getBaseItem().getType() == BaseItemKind.EPISODE && rowItem instanceof BaseItemDtoBaseRowItem && ((BaseItemDtoBaseRowItem) rowItem).getPreferSeriesPoster()) {
                 image = JellyfinImageKt.getSeriesPrimaryImage(rowItem.getBaseItem());
             } else if (rowItem instanceof BaseItemDtoBaseRowItem && ((BaseItemDtoBaseRowItem) rowItem).getPreferThumbForMovies() && (rowItem.getBaseItem().getType() == BaseItemKind.MOVIE || rowItem.getBaseItem().getType() == BaseItemKind.VIDEO || rowItem.getBaseItem().getType() == BaseItemKind.EPISODE)) {
-                // For Continue Watching row: use thumb/backdrop for movies and episodes
+                // For Continue Watching row: respect preferParentThumb setting
                 if (rowItem.getBaseItem().getType() == BaseItemKind.EPISODE) {
-                    // Episodes: try parent/series thumb first, then series backdrop
-                    image = JellyfinImageKt.getParentImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.THUMB);
-                    if (image == null) {
-                        image = JellyfinImageKt.getSeriesThumbImage(rowItem.getBaseItem());
-                    }
-                    if (image == null) {
-                        // Try series backdrop
-                        java.util.List<JellyfinImage> parentBackdrops = JellyfinImageKt.getParentBackdropImages(rowItem.getBaseItem());
-                        if (!parentBackdrops.isEmpty()) {
-                            image = parentBackdrops.get(0);
+                    // Episodes: respect preferParentThumb setting
+                    if (rowItem.getPreferParentThumb()) {
+                        // When enabled: use series thumb (wide thumbnail)
+                        image = JellyfinImageKt.getParentImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.THUMB);
+                        if (image == null) {
+                            image = JellyfinImageKt.getSeriesThumbImage(rowItem.getBaseItem());
                         }
+                        if (image == null) {
+                            // Try series backdrop
+                            java.util.List<JellyfinImage> parentBackdrops = JellyfinImageKt.getParentBackdropImages(rowItem.getBaseItem());
+                            if (!parentBackdrops.isEmpty()) {
+                                image = parentBackdrops.get(0);
+                            }
+                        }
+                    } else {
+                        // When disabled: use series primary (portrait poster)
+                        image = JellyfinImageKt.getSeriesPrimaryImage(rowItem.getBaseItem());
                     }
                     // Note: Never fall back to episode's primary (screenshot) to maintain consistency
                 } else {
-                    // Movies: prefer thumb, fallback to backdrop (never poster for consistency)
-                    image = JellyfinImageKt.getItemImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.THUMB);
-                    if (image == null) {
-                        // Backdrop images are stored separately, get the first one
-                        java.util.List<JellyfinImage> backdrops = JellyfinImageKt.getItemBackdropImages(rowItem.getBaseItem());
-                        if (!backdrops.isEmpty()) {
-                            image = backdrops.get(0);
+                    // Movies: respect preferParentThumb setting
+                    if (rowItem.getPreferParentThumb()) {
+                        // When enabled: use thumb/backdrop (wide)
+                        image = JellyfinImageKt.getItemImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.THUMB);
+                        if (image == null) {
+                            // Backdrop images are stored separately, get the first one
+                            java.util.List<JellyfinImage> backdrops = JellyfinImageKt.getItemBackdropImages(rowItem.getBaseItem());
+                            if (!backdrops.isEmpty()) {
+                                image = backdrops.get(0);
+                            }
                         }
+                    } else {
+                        // When disabled: use primary (portrait poster)
+                        image = JellyfinImageKt.getItemImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.PRIMARY);
                     }
                 }
             } else if (aspect == ImageHelper.ASPECT_RATIO_16_9 && !isUserView) {
@@ -457,17 +476,16 @@ public class CardPresenter extends Presenter {
                         }
                     }
                 } else if (rowItem.getBaseItem().getType() == BaseItemKind.EPISODE) {
-                    // Episodes: always try parent/series thumb first for wide mode, then fall back to episode primary
-                    image = JellyfinImageKt.getParentImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.THUMB);
+                    // Episodes: prefer episode's own primary (screenshot) first, then fall back to series images
+                    image = JellyfinImageKt.getItemImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.PRIMARY);
                     if (image == null) {
-                        image = JellyfinImageKt.getSeriesThumbImage(rowItem.getBaseItem());
-                    }
-                    if (image == null) {
-                        // Fall back to episode's own thumb or primary
                         image = JellyfinImageKt.getItemImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.THUMB);
                     }
                     if (image == null) {
-                        image = JellyfinImageKt.getItemImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.PRIMARY);
+                        image = JellyfinImageKt.getParentImages(rowItem.getBaseItem()).get(org.jellyfin.sdk.model.api.ImageType.THUMB);
+                    }
+                    if (image == null) {
+                        image = JellyfinImageKt.getSeriesThumbImage(rowItem.getBaseItem());
                     }
                 } else {
                     // Other types: try thumb

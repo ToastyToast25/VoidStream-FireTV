@@ -5,6 +5,9 @@
 
     <!-- Android TV Integration -->
     <uses-permission android:name="com.android.providers.tv.permission.WRITE_EPG_DATA" />
+    
+    <!-- Fire TV Alexa focus management -->
+    <uses-permission android:name="amazon.speech.permission.SEND_DATA_TO_ALEXA" />
 
     <!-- Generic permissions -->
     <uses-permission android:name="android.permission.INTERNET" />

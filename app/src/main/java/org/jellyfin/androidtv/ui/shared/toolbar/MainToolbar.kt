@@ -63,6 +63,7 @@ import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
+import org.jellyfin.sdk.model.api.CollectionType
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.koin.compose.koinInject
@@ -119,7 +120,8 @@ fun MainToolbar(
 	var userViews by remember { mutableStateOf<List<BaseItemDto>>(emptyList()) }
 	LaunchedEffect(Unit) {
 		userViewsRepository.views.collect { views ->
-			userViews = views.toList()
+			// Filter out playlists from toolbar
+			userViews = views.filter { it.collectionType != CollectionType.PLAYLISTS }.toList()
 		}
 	}
 

@@ -18,7 +18,12 @@ class LicensesScreen : OptionsFragment() {
 	}
 
 	private val libs by lazy {
-		Libs.Builder().withContext(requireContext()).build()
+		try {
+			Libs.Builder().withContext(requireContext()).build()
+		} catch (e: Exception) {
+			// If aboutlibraries.json is not generated, return empty libs
+			Libs.Builder().withJson("{}").build()
+		}
 	}
 
 	private fun OptionsScreen.createLibrary(artifactId: String) {

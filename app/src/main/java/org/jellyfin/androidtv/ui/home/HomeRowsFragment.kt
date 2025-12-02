@@ -36,6 +36,7 @@ import org.jellyfin.androidtv.data.repository.CustomMessageRepository
 import org.jellyfin.androidtv.data.repository.NotificationsRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.data.service.BackgroundService
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.browsing.CompositeClickedListener
 import org.jellyfin.androidtv.ui.browsing.CompositeSelectedListener
@@ -70,6 +71,7 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 	private val mediaManager by inject<MediaManager>()
 	private val notificationsRepository by inject<NotificationsRepository>()
 	private val userRepository by inject<UserRepository>()
+	private val userPreferences by inject<UserPreferences>()
 	private val userSettingPreferences by inject<UserSettingPreferences>()
 	private val userViewsRepository by inject<UserViewsRepository>()
 	private val dataRefreshService by inject<DataRefreshService>()
@@ -99,6 +101,10 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 	private val nowPlaying by lazy { HomeFragmentNowPlayingRow(lifecycleScope, playbackManager, mediaManager) }
 	private val liveTVRow by lazy { HomeFragmentLiveTVRow(requireActivity(), userRepository, navigationRepository) }
 	private val mediaBarRow by lazy { HomeFragmentMediaBarRow(lifecycleScope, mediaBarViewModel) }
+
+	// Store rows for refreshing
+	private var currentRows = mutableListOf<HomeFragmentRow>()
+	private var playlistRow: HomeFragmentMoonfinPlaylistRow? = null
 
 	// Debouncer for selection updates - only update UI after user stops navigating
 	private val selectionDebouncer by lazy { Debouncer(150.milliseconds, lifecycleScope) }
@@ -150,16 +156,42 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 			if (!isActive) return@launch
 
 			// Actually add the sections
+			val mergeContinueWatching = userPreferences[UserPreferences.mergeContinueWatchingNextUp]
+			var mergedRowAdded = false
+			
 			for (section in homesections) when (section) {
 				HomeSectionType.MEDIA_BAR -> rows.add(mediaBarRow) // Add Media Bar as a native row
 				HomeSectionType.LATEST_MEDIA -> rows.add(helper.loadRecentlyAdded(userViewsRepository.views.first()))
 				HomeSectionType.LIBRARY_TILES_SMALL -> rows.add(HomeFragmentViewsRow(small = false))
 				HomeSectionType.LIBRARY_BUTTONS -> rows.add(HomeFragmentViewsRow(small = true))
-				HomeSectionType.RESUME -> rows.add(helper.loadResumeVideo())
+				HomeSectionType.RESUME -> {
+					if (mergeContinueWatching && !mergedRowAdded) {
+						rows.add(helper.loadMergedContinueWatching())
+						mergedRowAdded = true
+					} else if (!mergeContinueWatching) {
+						rows.add(helper.loadResumeVideo())
+					}
+				}
 				HomeSectionType.RESUME_AUDIO -> rows.add(helper.loadResumeAudio())
 				HomeSectionType.RESUME_BOOK -> Unit // Books are not (yet) supported
 				HomeSectionType.ACTIVE_RECORDINGS -> rows.add(helper.loadLatestLiveTvRecordings())
-				HomeSectionType.NEXT_UP -> rows.add(helper.loadNextUp())
+				HomeSectionType.NEXT_UP -> {
+					// Skip Next Up if already merged with Continue Watching
+					if (!mergeContinueWatching) {
+						rows.add(helper.loadNextUp())
+					} else if (!mergedRowAdded) {
+						// If user has Next Up but not Resume in their section list, add merged row here
+						rows.add(helper.loadMergedContinueWatching())
+						mergedRowAdded = true
+					}
+				}
+				HomeSectionType.PLAYLIST -> {
+					val playlistRow = helper.loadPlaylists()
+					if (playlistRow is HomeFragmentMoonfinPlaylistRow) {
+						this@HomeRowsFragment.playlistRow = playlistRow
+					}
+					rows.add(playlistRow)
+				}
 				HomeSectionType.LIVE_TV -> if (includeLiveTvRows) {
 					rows.add(liveTVRow)
 					rows.add(helper.loadOnNow())
@@ -167,6 +199,9 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 				HomeSectionType.NONE -> Unit
 			}
+
+			// Store rows for refreshing
+			currentRows = rows
 
 			// Add sections to layout
 			withContext(Dispatchers.Main) {
@@ -197,6 +232,28 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 					else -> Unit
 				}
 			}.launchIn(lifecycleScope)
+
+		// Listen for merge continue watching preference changes and recreate rows
+		var lastMergeState = userPreferences[UserPreferences.mergeContinueWatchingNextUp]
+		lifecycleScope.launch {
+			lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+				// Check preference every 500ms while resumed
+				while (true) {
+					delay(500.milliseconds)
+					val currentMergeState = userPreferences[UserPreferences.mergeContinueWatchingNextUp]
+					if (currentMergeState != lastMergeState) {
+						lastMergeState = currentMergeState
+						// Recreate the fragment to rebuild rows with new structure
+						parentFragmentManager.beginTransaction()
+							.detach(this@HomeRowsFragment)
+							.commitNow()
+						parentFragmentManager.beginTransaction()
+							.attach(this@HomeRowsFragment)
+							.commitNow()
+					}
+				}
+			}
+		}
 
 		lifecycleScope.launch {
 			lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
@@ -306,6 +363,9 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 				if (force) rowAdapter?.Retrieve()
 				else rowAdapter?.ReRetrieveIfNeeded()
 			}
+
+			// Refresh playlist row
+			playlistRow?.refresh()
 		}
 	}
 

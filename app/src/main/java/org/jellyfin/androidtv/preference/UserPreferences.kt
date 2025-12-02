@@ -196,7 +196,12 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		/**
 		 * Enable series thumbnails in home screen rows
 		 */
-		var seriesThumbnailsEnabled = booleanPreference("pref_enable_series_thumbnails", true)
+		var seriesThumbnailsEnabled = booleanPreference("pref_enable_series_thumbnails", false)
+
+		/**
+		 * Merge Continue Watching and Next Up into a single row
+		 */
+		var mergeContinueWatchingNextUp = booleanPreference("pref_merge_continue_watching_next_up", false)
 
 		/**
 		 * Subtitles foreground color

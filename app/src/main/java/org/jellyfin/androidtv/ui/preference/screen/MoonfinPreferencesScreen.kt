@@ -60,6 +60,17 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 			}
 		}
 
+		// Home Screen
+		category {
+			setTitle(R.string.home_section_settings)
+
+			checkbox {
+				setTitle(R.string.lbl_merge_continue_watching_next_up)
+				setContent(R.string.lbl_merge_continue_watching_next_up_description)
+				bind(userPreferences, UserPreferences.mergeContinueWatchingNextUp)
+			}
+		}
+
 		// Media Bar Settings
 		category {
 			setTitle(R.string.pref_media_bar_title)

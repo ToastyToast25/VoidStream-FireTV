@@ -61,15 +61,13 @@ class MyDetailsOverviewRowPresenter(
 			}
 		}
 
-		private fun populateGroupedMetadata(row: MyDetailsOverviewRow) {
-			val item = row.item
+	private fun populateGroupedMetadata(row: MyDetailsOverviewRow) {
+		val item = row.item
 
-			// Genres group
-			val genres = item.genres?.joinToString(", ")
-			binding.fdGenresGroup.isVisible = !genres.isNullOrBlank()
-			binding.fdGenresContent.text = genres
-
-			// Director group
+		// Genres group - hide for episodes
+		val genres = if (item.type == BaseItemKind.EPISODE) null else item.genres?.joinToString(", ")
+		binding.fdGenresGroup.isVisible = !genres.isNullOrBlank()
+		binding.fdGenresContent.text = genres			// Director group
 			val director = item.people?.filter { it.type == PersonKind.DIRECTOR }?.joinToString(", ") { it.name ?: "" }
 			binding.fdDirectorGroup.isVisible = !director.isNullOrBlank()
 			binding.fdDirectorContent.text = director

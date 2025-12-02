@@ -62,6 +62,7 @@ import org.jellyfin.androidtv.ui.navigation.Destinations;
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository;
 import org.jellyfin.androidtv.ui.playback.MediaManager;
 import org.jellyfin.androidtv.ui.playback.PlaybackLauncher;
+import org.jellyfin.androidtv.ui.playback.PrePlaybackTrackSelector;
 import org.jellyfin.androidtv.ui.presentation.CardPresenter;
 import org.jellyfin.androidtv.ui.presentation.CustomListRowPresenter;
 import org.jellyfin.androidtv.ui.presentation.InfoCardPresenter;
@@ -80,6 +81,7 @@ import org.jellyfin.androidtv.util.apiclient.Response;
 import org.jellyfin.androidtv.util.sdk.BaseItemExtensionsKt;
 import org.jellyfin.androidtv.util.sdk.TrailerUtils;
 import org.jellyfin.androidtv.util.sdk.compat.JavaCompat;
+import org.jellyfin.sdk.api.client.ApiClient;
 import org.jellyfin.sdk.model.api.BaseItemDto;
 import org.jellyfin.sdk.model.api.BaseItemKind;
 import org.jellyfin.sdk.model.api.BaseItemPerson;
@@ -115,6 +117,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     private TextUnderButton mRecSeriesButton;
     private TextUnderButton mSeriesSettingsButton;
     TextUnderButton mWatchedToggleButton;
+    private TextUnderButton mAddToPlaylistButton;
 
     private DisplayMetrics mMetrics;
 
@@ -588,7 +591,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
 
                 break;
             case SERIES:
-                ItemRowAdapter nextUpAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSeriesGetNextUpRequest(mBaseItem.getId()), false, new CardPresenter(true, 130), adapter);
+                ItemRowAdapter nextUpAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSeriesGetNextUpRequest(mBaseItem.getId()), true, new CardPresenter(), adapter);
                 addItemRow(adapter, nextUpAdapter, 0, getString(R.string.lbl_next_up));
 
                 ItemRowAdapter seasonsAdapter = new ItemRowAdapter(requireContext(), BrowsingUtils.createSeasonsRequest(mBaseItem.getId()), new CardPresenter(), adapter);
@@ -726,8 +729,88 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         }
     }
 
+    void addToMoonfinPlaylist(UUID itemId) {
+        new Thread(() -> {
+            ApiClient api = KoinJavaComponent.get(ApiClient.class);
+            org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager playlistManager = 
+                new org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager(api);
+            
+            try {
+                boolean success = kotlinx.coroutines.BuildersKt.runBlocking(
+                    kotlinx.coroutines.Dispatchers.getIO(),
+                    (coroutineScope, continuation) -> playlistManager.addToMoonfinPlaylist(itemId, continuation)
+                );
+                
+                requireActivity().runOnUiThread(() -> {
+                    if (success) {
+                        Utils.showToast(requireContext(), getString(R.string.msg_added_to_watch_list));
+                        // Update button to remove state
+                        mAddToPlaylistButton.setIcon(R.drawable.ic_decrease, null);
+                        mAddToPlaylistButton.setLabel(getString(R.string.lbl_remove_from_watch_list));
+                        mAddToPlaylistButton.setActivated(false);
+                        mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                removeFromMoonfinPlaylist(itemId);
+                            }
+                        });
+                    } else {
+                        Utils.showToast(requireContext(), getString(R.string.msg_failed_to_add_to_watch_list));
+                    }
+                });
+            } catch (Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    Utils.showToast(requireContext(), getString(R.string.msg_failed_to_add_to_watch_list));
+                });
+            }
+        }).start();
+    }
+
+    void removeFromMoonfinPlaylist(UUID itemId) {
+        new Thread(() -> {
+            ApiClient api = KoinJavaComponent.get(ApiClient.class);
+            org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager playlistManager = 
+                new org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager(api);
+            
+            try {
+                boolean success = kotlinx.coroutines.BuildersKt.runBlocking(
+                    kotlinx.coroutines.Dispatchers.getIO(),
+                    (coroutineScope, continuation) -> playlistManager.removeFromMoonfinPlaylist(itemId, continuation)
+                );
+                
+                requireActivity().runOnUiThread(() -> {
+                    if (success) {
+                        Utils.showToast(requireContext(), getString(R.string.msg_removed_from_watch_list));
+                        // Update button to add state
+                        mAddToPlaylistButton.setIcon(R.drawable.ic_add, null);
+                        mAddToPlaylistButton.setLabel(getString(R.string.lbl_add_to_watch_list));
+                        mAddToPlaylistButton.setActivated(false);
+                        mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                addToMoonfinPlaylist(itemId);
+                            }
+                        });
+                    } else {
+                        Utils.showToast(requireContext(), getString(R.string.msg_failed_to_remove_from_watch_list));
+                    }
+                });
+            } catch (Exception e) {
+                requireActivity().runOnUiThread(() -> {
+                    Utils.showToast(requireContext(), getString(R.string.msg_failed_to_remove_from_watch_list));
+                });
+            }
+        }).start();
+    }
+
     void gotoSeries() {
         navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mBaseItem.getSeriesId()));
+    }
+
+    void gotoPreviousEpisode() {
+        if (mPrevItemId != null) {
+            navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(mPrevItemId));
+        }
     }
 
     private void deleteItem() {
@@ -833,25 +916,94 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                 mDetailsOverviewRow.addAction(imix);
             }
             
-            // Add audio track selector button for video content
+            // Add audio track selector button for video content (only if multiple audio tracks)
             if (baseItem.getType() == BaseItemKind.MOVIE 
                     || baseItem.getType() == BaseItemKind.EPISODE 
                     || baseItem.getType() == BaseItemKind.VIDEO) {
-                TextUnderButton audioButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_audio, buttonSize, 0, getString(R.string.lbl_audio_track), new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        FullDetailsFragmentHelperKt.showAudioTrackSelector(FullDetailsFragment.this, v, mBaseItem);
-                    }
-                });
-                mDetailsOverviewRow.addAction(audioButton);
                 
-                TextUnderButton subtitleButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_subtitle, buttonSize, 0, getString(R.string.lbl_subtitle_track), new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        FullDetailsFragmentHelperKt.showSubtitleTrackSelector(FullDetailsFragment.this, v, mBaseItem);
-                    }
-                });
-                mDetailsOverviewRow.addAction(subtitleButton);
+                PrePlaybackTrackSelector trackSelector = KoinJavaComponent.get(PrePlaybackTrackSelector.class);
+                int audioTrackCount = trackSelector.getAudioTracks(mBaseItem).size();
+                int subtitleTrackCount = trackSelector.getSubtitleTracks(mBaseItem).size();
+                
+                // Only show audio button if there are multiple audio tracks
+                if (audioTrackCount > 1) {
+                    TextUnderButton audioButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_audio, buttonSize, 0, getString(R.string.lbl_audio_track), new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            FullDetailsFragmentHelperKt.showAudioTrackSelector(FullDetailsFragment.this, v, mBaseItem);
+                        }
+                    });
+                    mDetailsOverviewRow.addAction(audioButton);
+                }
+                
+                // Only show subtitle button if there are multiple subtitle tracks
+                if (subtitleTrackCount > 1) {
+                    TextUnderButton subtitleButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_subtitle, buttonSize, 0, getString(R.string.lbl_subtitle_track), new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            FullDetailsFragmentHelperKt.showSubtitleTrackSelector(FullDetailsFragment.this, v, mBaseItem);
+                        }
+                    });
+                    mDetailsOverviewRow.addAction(subtitleButton);
+                }
+                
+                // Add to Watch List button - only show if playlist home section is active
+                org.jellyfin.androidtv.preference.UserSettingPreferences userSettingPreferences = 
+                    org.koin.java.KoinJavaComponent.get(org.jellyfin.androidtv.preference.UserSettingPreferences.class);
+                java.util.List<org.jellyfin.androidtv.constant.HomeSectionType> activeHomeSections = 
+                    userSettingPreferences.getActiveHomesections();
+                
+                timber.log.Timber.d("Checking Add to Watch List button - activeHomeSections=" + activeHomeSections + ", contains PLAYLIST=" + activeHomeSections.contains(org.jellyfin.androidtv.constant.HomeSectionType.PLAYLIST));
+                
+                if (activeHomeSections.contains(org.jellyfin.androidtv.constant.HomeSectionType.PLAYLIST)) {
+                    timber.log.Timber.d("Creating watch list button for item: " + mBaseItem.getId());
+                    // Create button immediately with add icon, will check if in playlist asynchronously
+                    mAddToPlaylistButton = TextUnderButton.create(requireContext(), R.drawable.ic_add, buttonSize, 0, getString(R.string.lbl_add_to_watch_list), new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            addToMoonfinPlaylist(mBaseItem.getId());
+                        }
+                    });
+                    mDetailsOverviewRow.addAction(mAddToPlaylistButton);
+                    timber.log.Timber.d("Watch list button added to details row");
+                    
+                    // Check if item is already in playlist and update button icon asynchronously
+                    new Thread(() -> {
+                        try {
+                            ApiClient api = KoinJavaComponent.get(ApiClient.class);
+                            org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager playlistManager = 
+                                new org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager(api);
+                            
+                            boolean isInPlaylist = kotlinx.coroutines.BuildersKt.runBlocking(
+                                kotlinx.coroutines.Dispatchers.getIO(),
+                                (coroutineScope, continuation) -> playlistManager.isItemInPlaylist(mBaseItem.getId(), continuation)
+                            );
+                            
+                            timber.log.Timber.d("Item in playlist: " + isInPlaylist);
+                            
+                            if (isInPlaylist) {
+                                requireActivity().runOnUiThread(() -> {
+                                    // Update button to show remove
+                                    mAddToPlaylistButton.setIcon(R.drawable.ic_decrease, null);
+                                    mAddToPlaylistButton.setLabel(getString(R.string.lbl_remove_from_watch_list));
+                                    mAddToPlaylistButton.setActivated(false);
+                                    // Update click listener
+                                    mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            removeFromMoonfinPlaylist(mBaseItem.getId());
+                                        }
+                                    });
+                                    timber.log.Timber.d("Updated watch list button to remove state");
+                                });
+                            }
+                        } catch (Exception e) {
+                            timber.log.Timber.e(e, "Error checking if item in playlist");
+                        }
+                    }).start();
+                } else {
+                    timber.log.Timber.d("Watch List section not active, skipping button");
+                }
             }
         }
         //Video versions button
@@ -993,7 +1145,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         }
 
         if (mBaseItem.getType() == BaseItemKind.EPISODE && mBaseItem.getSeriesId() != null) {
-            //add the prev button first so it will be there in proper position - we'll show it later if needed
+            //add the prev button but don't show it in main row - it will be in Other Options menu
             mPrevButton = TextUnderButton.create(requireContext(), R.drawable.ic_previous_episode, buttonSize, 3, getString(R.string.lbl_previous_episode), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -1002,18 +1154,19 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                     }
                 }
             });
-
-            mDetailsOverviewRow.addAction(mPrevButton);
+            mPrevButton.setVisibility(View.GONE);
 
             //now go get our prev episode id
             FullDetailsFragmentHelperKt.populatePreviousButton(FullDetailsFragment.this);
 
+            // Add Go to Series button in the main button row
             goToSeriesButton = TextUnderButton.create(requireContext(), R.drawable.ic_tv, buttonSize, 0, getString(R.string.lbl_goto_series), new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     gotoSeries();
                 }
             });
+            goToSeriesButton.setVisibility(View.VISIBLE);
             mDetailsOverviewRow.addAction(goToSeriesButton);
         }
 
@@ -1100,6 +1253,12 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         boolean resumeButtonVisible = (isSeries && isStarted && !isFinished) || (JavaCompat.getCanResume(mBaseItem));
         mResumeButton.setVisibility(resumeButtonVisible ? View.VISIBLE : View.GONE);
 
+        // Update play button to show restart when resume button is visible
+        if (resumeButtonVisible && playButton != null) {
+            playButton.setIcon(R.drawable.ic_loop, null);
+            playButton.setLabel(getString(R.string.lbl_from_beginning));
+        }
+
         if (resumeButtonVisible) {
             mResumeButton.requestFocus();
         } else {
@@ -1146,7 +1305,6 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         if (trailerButton != null) actionsList.add(trailerButton);
         if (shuffleButton != null) actionsList.add(shuffleButton);
         if (favButton != null) actionsList.add(favButton);
-        if (goToSeriesButton != null) actionsList.add(goToSeriesButton);
 
         // reverse the list so the less important actions are hidden first
         Collections.reverse(actionsList);
