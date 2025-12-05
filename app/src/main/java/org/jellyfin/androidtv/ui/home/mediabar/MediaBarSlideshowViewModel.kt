@@ -48,19 +48,14 @@ class MediaBarSlideshowViewModel(
 	private var items: List<MediaBarSlideItem> = emptyList()
 	private var autoAdvanceJob: Job? = null
 	private var currentUserId: UUID? = null
-	private var isInitialLoad = true
-	private var lastLoadTimestamp: Long = 0
 
 	init {
-		loadSlideshowItems()
-		
 		// Observe user changes and reload content when user switches
 		userRepository.currentUser
 			.filterNotNull()
 			.onEach { user ->
 				// Check if user has actually changed (not just initial load)
 				if (currentUserId != null && currentUserId != user.id) {
-					Timber.i("MediaBar: User switched from $currentUserId to ${user.id}, reloading content")
 					reloadContent()
 				}
 				currentUserId = user.id
@@ -69,21 +64,28 @@ class MediaBarSlideshowViewModel(
 	}
 
 	fun setFocused(focused: Boolean) {
+		val wasNotFocused = !_isFocused.value
 		_isFocused.value = focused
 		
 		// When losing focus, stop auto-advance
 		if (!focused) {
 			autoAdvanceJob?.cancel()
 		} else {
-			// When gaining focus, restart auto-advance if not paused
-			if (!_playbackState.value.isPaused) {
+			// When gaining focus from unfocused state, reload with fresh random items
+			if (wasNotFocused) {
+				reloadContent()
+			} else if (!_playbackState.value.isPaused) {
+				// Just restart auto-advance if already had focus
 				resetAutoAdvanceTimer()
 			}
 		}
 	}
 
 	/**
-	 * Load featured media items for the slideshow
+	 * Load featured media items for the slideshow.
+	 * Uses double-randomization strategy:
+	 * 1. Server-side: sortBy RANDOM returns random set from server
+	 * 2. Client-side: shuffle() randomizes the combined results again
 	 */
 	private fun loadSlideshowItems() {
 		viewModelScope.launch {
@@ -92,12 +94,13 @@ class MediaBarSlideshowViewModel(
 			val config = getConfig()
 
 			// Fetch movies and shows randomly on IO dispatcher
+			// Using larger limit (3x) to ensure enough items with backdrops after filtering
 			val (moviesResponse, showsResponse) = withContext(Dispatchers.IO) {
 				val movies by api.itemsApi.getItems(
 					includeItemTypes = setOf(BaseItemKind.MOVIE),
 					recursive = true,
 					sortBy = setOf(org.jellyfin.sdk.model.api.ItemSortBy.RANDOM),
-					limit = config.maxItems * 2, // Get more items to filter from
+					limit = config.maxItems * 3, // Get more items to filter from
 						filters = setOf(ItemFilter.IS_NOT_FOLDER),
 						fields = setOf(
 							ItemFields.OVERVIEW,
@@ -111,7 +114,7 @@ class MediaBarSlideshowViewModel(
 						includeItemTypes = setOf(BaseItemKind.SERIES),
 						recursive = true,
 						sortBy = setOf(org.jellyfin.sdk.model.api.ItemSortBy.RANDOM),
-						limit = config.maxItems * 2, // Get more items to filter from
+						limit = config.maxItems * 3, // Get more items to filter from
 						filters = setOf(ItemFilter.IS_NOT_FOLDER),
 						fields = setOf(
 							ItemFields.OVERVIEW,
@@ -124,6 +127,7 @@ class MediaBarSlideshowViewModel(
 					Pair(movies, shows)
 				}
 
+				// Combine movies and shows, filter for backdrops, shuffle client-side, take max items
 				val allItems = (moviesResponse.items.orEmpty() + showsResponse.items.orEmpty())
 					.filter { it.backdropImageTags?.isNotEmpty() == true }
 					.shuffled()
@@ -166,8 +170,6 @@ class MediaBarSlideshowViewModel(
 				if (items.isNotEmpty()) {
 					_state.value = MediaBarState.Ready(items)
 					startAutoPlay()
-					// Mark as loaded after successful initial load
-					isInitialLoad = false
 				} else {
 					_state.value = MediaBarState.Error("No items found")
 				}
@@ -204,39 +206,25 @@ class MediaBarSlideshowViewModel(
 	}
 
 	/**
-	 * Reload slideshow content (e.g., when user switches profiles)
+	 * Reload slideshow content with fresh random items.
+	 * Called when:
+	 * - User switches profiles
+	 * - Media bar gains focus/visibility
+	 * - Manual refresh requested
 	 */
 	fun reloadContent() {
-		Timber.d("MediaBar: Reloading slideshow content")
 		// Cancel auto-advance
 		autoAdvanceJob?.cancel()
-		// Reset playback state
 		_playbackState.value = SlideshowPlaybackState()
-		// Reload items
 		loadSlideshowItems()
 	}
 
 	/**
-	 * Load content on first HomeFragment creation, ensuring fresh random items each app launch
+	 * Load content on HomeFragment creation
+	 * Always fetches fresh random items - no caching
 	 */
 	fun loadInitialContent() {
-		if (isInitialLoad) {
-			Timber.d("MediaBar: Loading fresh random items for new session")
-			isInitialLoad = false
-			lastLoadTimestamp = System.currentTimeMillis()
-			loadSlideshowItems()
-		} else {
-			Timber.d("MediaBar: Using existing content from this session")
-		}
-	}
-	
-	/**
-	 * Force reload with fresh random items (e.g., user manually requests refresh)
-	 */
-	fun forceRefresh() {
-		Timber.d("MediaBar: Force refreshing with new random items")
-		lastLoadTimestamp = System.currentTimeMillis()
-		reloadContent()
+		loadSlideshowItems()
 	}
 
 	/**

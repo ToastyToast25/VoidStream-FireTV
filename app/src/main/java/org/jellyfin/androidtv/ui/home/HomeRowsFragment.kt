@@ -330,8 +330,13 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 			//Re-retrieve anything that needs it but delay slightly so we don't take away gui landing
 			refreshCurrentItem()
 			refreshRows()
+			
+			// Reload media bar with fresh random items when returning to home
+			mediaBarViewModel.loadInitialContent()
 		} else {
 			justLoaded = false
+			// Load initial content on first load
+			mediaBarViewModel.loadInitialContent()
 		}
 
 		// Update audio queue
