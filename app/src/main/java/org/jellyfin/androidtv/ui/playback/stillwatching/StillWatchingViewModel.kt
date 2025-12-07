@@ -3,12 +3,11 @@ package org.jellyfin.androidtv.ui.playback.stillwatching
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.util.apiclient.ioCall
 import org.jellyfin.androidtv.preference.constant.NextUpBehavior
 import org.jellyfin.androidtv.ui.InteractionTrackerViewModel
 import org.jellyfin.androidtv.util.apiclient.itemImages
@@ -48,8 +47,8 @@ class StillWatchingViewModel(
 		_state.value = StillWatchingState.CLOSE
 	}
 
-	private suspend fun loadItemData(id: UUID) = withContext(Dispatchers.IO) {
-		val item by api.userLibraryApi.getItem(itemId = id)
+	private suspend fun loadItemData(id: UUID) = api.ioCall {
+		val item by userLibraryApi.getItem(itemId = id)
 
 		val thumbnail = when (userPreferences[UserPreferences.nextUpBehavior]) {
 			NextUpBehavior.EXTENDED -> item.itemImages[ImageType.PRIMARY]

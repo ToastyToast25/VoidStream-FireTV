@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.data.repository.ItemRepository
+import org.jellyfin.androidtv.util.apiclient.ioCallContent
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
@@ -30,19 +30,19 @@ class PhotoPlayerViewModel(private val api: ApiClient) : ViewModel() {
 
 	suspend fun loadItem(id: UUID, sortBy: Collection<ItemSortBy>, sortOrder: SortOrder) {
 		// Load requested item
-		val itemResponse = withContext(Dispatchers.IO) {
-			api.userLibraryApi.getItem(itemId = id).content
+		val itemResponse = api.ioCallContent {
+			userLibraryApi.getItem(itemId = id)
 		}
 		_currentItem.value = itemResponse
 
-		val albumResponse = withContext(Dispatchers.IO) {
-			api.itemsApi.getItems(
+		val albumResponse = api.ioCallContent {
+			itemsApi.getItems(
 				parentId = itemResponse.parentId,
 				includeItemTypes = setOf(BaseItemKind.PHOTO),
 				fields = ItemRepository.itemFields,
 				sortBy = sortBy,
 				sortOrder = listOf(sortOrder),
-			).content
+			)
 		}
 		album = albumResponse.items
 		albumIndex = album.indexOfFirst { it.id == id }

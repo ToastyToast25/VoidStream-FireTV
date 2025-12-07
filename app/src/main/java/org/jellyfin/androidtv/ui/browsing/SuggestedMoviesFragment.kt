@@ -1,12 +1,11 @@
 package org.jellyfin.androidtv.ui.browsing
 
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.constant.QueryType
 import org.jellyfin.androidtv.data.repository.ItemRepository
+import org.jellyfin.androidtv.util.apiclient.ioCallContent
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -24,15 +23,15 @@ class SuggestedMoviesFragment : EnhancedBrowseFragment() {
 
 	override fun setupQueries(rowLoader: RowLoader) {
 		lifecycleScope.launch {
-			val response = withContext(Dispatchers.IO) {
-				api.itemsApi.getItems(
+			val response = api.ioCallContent {
+				itemsApi.getItems(
 					parentId = mFolder.id,
 					includeItemTypes = setOf(BaseItemKind.MOVIE),
 					sortOrder = setOf(SortOrder.DESCENDING),
 					sortBy = setOf(ItemSortBy.DATE_PLAYED),
 					limit = 8,
 					recursive = true,
-				).content
+				)
 			}
 
 			for (item in response.items) {

@@ -3,12 +3,11 @@ package org.jellyfin.androidtv.ui.playback.nextup
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.util.apiclient.ioCall
 import org.jellyfin.androidtv.preference.constant.NextUpBehavior
 import org.jellyfin.androidtv.util.apiclient.itemImages
 import org.jellyfin.androidtv.util.apiclient.parentImages
@@ -45,8 +44,8 @@ class NextUpViewModel(
 		_state.value = NextUpState.CLOSE
 	}
 
-	private suspend fun loadItemData(id: UUID) = withContext(Dispatchers.IO) {
-		val item by api.userLibraryApi.getItem(itemId = id)
+	private suspend fun loadItemData(id: UUID) = api.ioCall {
+		val item by userLibraryApi.getItem(itemId = id)
 
 		val thumbnail = item.itemImages[ImageType.PRIMARY]
 			.takeIf { userPreferences[UserPreferences.nextUpBehavior] == NextUpBehavior.EXTENDED }
