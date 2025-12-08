@@ -22,7 +22,7 @@ fun DreamView(
 	showClock: Boolean,
 ) {
 	val userPreferences: UserPreferences = koinInject()
-	val isDimmingEnabled = userPreferences[UserPreferences.screensaverDimming]
+	val dimmingLevel = userPreferences[UserPreferences.screensaverDimmingLevel]
 
 	Box(
 		modifier = Modifier
@@ -43,11 +43,11 @@ fun DreamView(
 		}
 
 		// Dimming overlay
-		if (isDimmingEnabled) {
+		if (dimmingLevel > 0) {
 			Box(
 				modifier = Modifier
 					.fillMaxSize()
-					.background(Color.Black.copy(alpha = 0.5f))
+					.background(Color.Black.copy(alpha = dimmingLevel / 100f))
 			)
 		}
 

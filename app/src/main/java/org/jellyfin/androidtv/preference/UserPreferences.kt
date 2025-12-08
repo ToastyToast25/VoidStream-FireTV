@@ -249,9 +249,10 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var screensaverMode = stringPreference("pref_screensaver_mode", "library")
 
 		/**
-		 * Apply screen dimming to the screensaver.
+		 * Screen dimming level for the screensaver (1-100%).
+		 * 0 means no dimming.
 		 */
-		var screensaverDimming = booleanPreference("pref_screensaver_dimming", false)
+		var screensaverDimmingLevel = intPreference("pref_screensaver_dimming_level", 0)
 
 		/**
 		 * Timeout before showing the screensaver in app, depends on [screensaverInAppEnabled].

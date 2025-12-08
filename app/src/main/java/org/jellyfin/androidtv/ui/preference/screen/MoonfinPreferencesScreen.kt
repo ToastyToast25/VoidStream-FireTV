@@ -3,10 +3,12 @@ package org.jellyfin.androidtv.ui.preference.screen
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
+import org.jellyfin.androidtv.ui.preference.custom.DurationSeekBarPreference
 import org.jellyfin.androidtv.ui.preference.dsl.OptionsFragment
 import org.jellyfin.androidtv.ui.preference.dsl.checkbox
 import org.jellyfin.androidtv.ui.preference.dsl.list
 import org.jellyfin.androidtv.ui.preference.dsl.optionsScreen
+import org.jellyfin.androidtv.ui.preference.dsl.seekbar
 import org.jellyfin.preference.store.PreferenceStore
 import org.koin.android.ext.android.inject
 
@@ -138,11 +140,17 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 				bind(userPreferences, UserPreferences.screensaverMode)
 			}
 
-			checkbox {
+			seekbar {
 				setTitle(R.string.pref_screensaver_dimming)
-				setContent(R.string.pref_screensaver_dimming_description)
+				setContent(R.string.pref_screensaver_dimming_level_description)
+				min = 0
+				max = 100
+				increment = 5
+				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
+					override fun display(value: Int) = if (value == 0) "Off" else "$value%"
+				}
 
-				bind(userPreferences, UserPreferences.screensaverDimming)
+				bind(userPreferences, UserPreferences.screensaverDimmingLevel)
 
 				depends { userPreferences[UserPreferences.screensaverInAppEnabled] }
 			}
