@@ -55,8 +55,11 @@ Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted 
 - Cleaner icon-based design for frequently used actions
 
 ### 🎵 Playback & Media Control
+- **Theme Music Playback** - Background theme music support for TV shows and movies with volume control
 - **Pre-Playback Track Selection** - Choose your preferred audio track and subtitle before playback starts (configurable in settings)
-- **Automatic Screensaver Dimming** - Reduces brightness after 90 seconds of playback inactivity to prevent screen burn-in
+- **Next Episode Countdown** - Skip button shows countdown timer when next episode is available
+- **Automatic Screensaver Dimming** - Reduces brightness after 90 seconds of playback inactivity to prevent screen burn-in with dynamic logo/clock movement
+- **Exit Confirmation Dialog** - Optional confirmation prompt when exiting the app (configurable in settings)
 - **OTA Update System** - Automatic check for new Moonfin versions with in-app update notifications
 
 ### 📊 Improved Details Screen
@@ -66,6 +69,8 @@ Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted 
 - Fits more useful information on screen without feeling cramped
 
 ### 🎨 UI Polish
+- **Adjustable Backdrop Blur** - Customizable background blur amount with slider control for personal preference
+- **Media Bar Opacity Control** - Slider-based opacity adjustment for the featured media bar overlay
 - Item details show up right in the row, no need to open every title to see what it is
 - Buttons look better when not focused (transparent instead of distracting)
 - Better contrast makes text easier to read
