@@ -79,6 +79,7 @@ open class BaseItemDtoBaseRowItem @JvmOverloads constructor(
 		baseItem?.type == BaseItemKind.AUDIO && baseItem.albumArtists != null -> baseItem.albumArtists?.joinToString(", ")
 		baseItem?.type == BaseItemKind.AUDIO && baseItem.albumArtist != null -> baseItem.albumArtist
 		baseItem?.type == BaseItemKind.AUDIO && baseItem.album != null -> baseItem.album
+		baseItem?.type == BaseItemKind.EPISODE -> baseItem.name
 		else -> baseItem?.getFullName(context)
 	}
 

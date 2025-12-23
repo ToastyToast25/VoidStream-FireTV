@@ -10,9 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.ParentalControlsRepository
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.itemhandling.AggregatedItemRowAdapter
 import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter
@@ -28,6 +30,7 @@ import timber.log.Timber
 class HomeFragmentAggregatedLatestRow : HomeFragmentRow, KoinComponent {
 	private val multiServerRepository by inject<MultiServerRepository>()
 	private val userPreferences by inject<UserPreferences>()
+	private val userSettingPreferences by inject<UserSettingPreferences>()
 	private val parentalControlsRepository by inject<ParentalControlsRepository>()
 
 	companion object {
@@ -36,6 +39,9 @@ class HomeFragmentAggregatedLatestRow : HomeFragmentRow, KoinComponent {
 	}
 
 	override fun addToRowsAdapter(context: Context, cardPresenter: CardPresenter, rowsAdapter: MutableObjectAdapter<Row>) {
+		val imageType = userSettingPreferences.getHomeRowImageType(HomeSectionType.LATEST_MEDIA)
+		val presenter = CardPresenter(true, imageType, 150)
+		
 		val lifecycleOwner = ProcessLifecycleOwner.get()
 		lifecycleOwner.lifecycleScope.launch {
 			try {
@@ -63,20 +69,13 @@ class HomeFragmentAggregatedLatestRow : HomeFragmentRow, KoinComponent {
 
 						// Create paginating adapter (filtering happens inside)
 						val adapter = AggregatedItemRowAdapter(
-							presenter = cardPresenter,
-							allItems = items,
-							parentalControlsRepository = parentalControlsRepository,
-							userPreferences = userPreferences,
-							chunkSize = CHUNK_SIZE,
-							preferParentThumb = preferParentThumb,
-							staticHeight = true
-						)
-
-						if (!adapter.hasItems()) return@forEach
-
-						// Load initial chunk
-						adapter.loadInitialItems()
-
+						presenter = presenter,
+						allItems = items,
+						parentalControlsRepository = parentalControlsRepository,
+						userPreferences = userPreferences,
+						chunkSize = CHUNK_SIZE,
+						preferParentThumb = preferParentThumb,
+						staticHeight = true
 						val header = HeaderItem(context.getString(R.string.lbl_latest_in, aggLib.displayName))
 						rowsAdapter.add(ListRow(header, adapter))
 						Timber.d("HomeFragmentAggregatedLatestRow: Added row for ${aggLib.displayName} with ${adapter.size()}/${adapter.getTotalItems()} items (paginated)")

@@ -365,7 +365,13 @@ fun ItemRowAdapter.retrieveUpcomingEpisodes(api: ApiClient, query: GetUpcomingEp
 
 			setItems(
 				items = response.items,
-				transform = { item, _ -> BaseItemDtoBaseRowItem(item) }
+				transform = { item, _ ->
+					BaseItemDtoBaseRowItem(
+						item = item,
+						preferParentThumb = preferParentThumb,
+						staticHeight = false
+					)
+				}
 			)
 
 			if (response.items.isEmpty()) removeRow()

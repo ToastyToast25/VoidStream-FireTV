@@ -5,6 +5,7 @@ import androidx.leanback.widget.Row
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.constant.ChangeTriggerType
+import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.data.repository.ItemRepository
 import org.jellyfin.androidtv.ui.browsing.BrowseRowDef
 import org.jellyfin.androidtv.ui.presentation.CardPresenter
@@ -36,7 +37,9 @@ class HomeFragmentLatestRow(
 				)
 
 				val title = context.getString(R.string.lbl_latest_in, item.name)
-				HomeFragmentBrowseRowDefRow(BrowseRowDef(title, request, ITEM_CHUNK_SIZE, arrayOf(ChangeTriggerType.LibraryUpdated)))
+				val browseRowDef = BrowseRowDef(title, request, ITEM_CHUNK_SIZE, arrayOf(ChangeTriggerType.LibraryUpdated))
+				browseRowDef.setSectionType(HomeSectionType.LATEST_MEDIA)
+				HomeFragmentBrowseRowDefRow(browseRowDef)
 			}.forEach { row ->
 				// Add row to adapter
 				row.addToRowsAdapter(context, cardPresenter, rowsAdapter)

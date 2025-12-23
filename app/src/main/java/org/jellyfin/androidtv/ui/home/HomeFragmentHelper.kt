@@ -57,16 +57,16 @@ class HomeFragmentHelper(
 			enableTotalRecordCount = true,
 		)
 
-		return HomeFragmentBrowseRowDefRow(
-			BrowseRowDef(
-				context.getString(R.string.home_section_recently_released),
-				query,
-				HOME_ROW_CHUNK_SIZE,
-				false,
-				true,
-				arrayOf(ChangeTriggerType.LibraryUpdated)
-			)
+		val browseRowDef = BrowseRowDef(
+			context.getString(R.string.home_section_recently_released),
+			query,
+			HOME_ROW_CHUNK_SIZE,
+			false,
+			true,
+			arrayOf(ChangeTriggerType.LibraryUpdated)
 		)
+		browseRowDef.setSectionType(HomeSectionType.RECENTLY_RELEASED)
+		return HomeFragmentBrowseRowDefRow(browseRowDef)
 	}
 
 	fun loadResume(title: String, includeMediaTypes: Collection<MediaType>): HomeFragmentRow {
@@ -79,7 +79,9 @@ class HomeFragmentHelper(
 			excludeItemTypes = setOf(BaseItemKind.AUDIO_BOOK),
 		)
 
-		return HomeFragmentBrowseRowDefRow(BrowseRowDef(title, query, HOME_ROW_CHUNK_SIZE, userPreferences[UserPreferences.seriesThumbnailsEnabled], true, arrayOf(ChangeTriggerType.TvPlayback, ChangeTriggerType.MoviePlayback)))
+		val browseRowDef = BrowseRowDef(title, query, HOME_ROW_CHUNK_SIZE, userPreferences[UserPreferences.seriesThumbnailsEnabled], true, arrayOf(ChangeTriggerType.TvPlayback, ChangeTriggerType.MoviePlayback))
+		browseRowDef.setSectionType(HomeSectionType.RESUME)
+		return HomeFragmentBrowseRowDefRow(browseRowDef)
 	}
 
 	fun loadResumeVideo(): HomeFragmentRow {
@@ -146,7 +148,9 @@ class HomeFragmentHelper(
 			limit = HOME_ROW_MAX_ITEMS
 		)
 
-		return HomeFragmentBrowseRowDefRow(BrowseRowDef(context.getString(R.string.lbl_recordings), query, HOME_ROW_CHUNK_SIZE))
+		val row = BrowseRowDef(context.getString(R.string.lbl_recordings), query, HOME_ROW_CHUNK_SIZE)
+		row.setSectionType(HomeSectionType.ACTIVE_RECORDINGS)
+		return HomeFragmentBrowseRowDefRow(row)
 	}
 
 	fun loadNextUp(): HomeFragmentRow {

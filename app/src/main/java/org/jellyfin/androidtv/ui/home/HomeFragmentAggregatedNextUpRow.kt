@@ -10,9 +10,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.constant.HomeSectionType
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.ParentalControlsRepository
 import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.ui.itemhandling.AggregatedItemRowAdapter
 import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter
@@ -30,13 +32,17 @@ class HomeFragmentAggregatedNextUpRow(
 ) : HomeFragmentRow, KoinComponent {
 	private val multiServerRepository by inject<MultiServerRepository>()
 	private val userPreferences by inject<UserPreferences>()
+	private val userSettingPreferences by inject<UserSettingPreferences>()
 	private val parentalControlsRepository by inject<ParentalControlsRepository>()
 
 	override fun addToRowsAdapter(context: Context, cardPresenter: CardPresenter, rowsAdapter: MutableObjectAdapter<Row>) {
+		// Create presenter with correct image type from settings
+		val imageType = userSettingPreferences.getHomeRowImageType(HomeSectionType.NEXT_UP)
+		val presenter = CardPresenter(true, imageType, 150)
 		val header = HeaderItem(context.getString(R.string.lbl_next_up))
 		
 		// Create a placeholder row that will be updated
-		val placeholderAdapter = MutableObjectAdapter<Any>(cardPresenter)
+		val placeholderAdapter = MutableObjectAdapter<Any>(presenter)
 		val row = ListRow(header, placeholderAdapter)
 		rowsAdapter.add(row)
 
@@ -58,7 +64,7 @@ class HomeFragmentAggregatedNextUpRow(
 				// Create paginating adapter with all items (filtering happens inside)
 				val preferParentThumb = userPreferences[UserPreferences.seriesThumbnailsEnabled]
 				val adapter = AggregatedItemRowAdapter(
-					presenter = cardPresenter,
+					presenter = presenter,
 					allItems = items,
 					parentalControlsRepository = parentalControlsRepository,
 					userPreferences = userPreferences,

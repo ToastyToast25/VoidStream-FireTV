@@ -274,10 +274,15 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     }
 
     public ItemRowAdapter(Context context, GetSpecialsRequest query, Presenter presenter, MutableObjectAdapter<Row> parent) {
+        this(context, query, false, presenter, parent);
+    }
+
+    public ItemRowAdapter(Context context, GetSpecialsRequest query, boolean preferParentThumb, Presenter presenter, MutableObjectAdapter<Row> parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mSpecialsQuery = query;
+        this.preferParentThumb = preferParentThumb;
         queryType = QueryType.Specials;
     }
 
@@ -334,10 +339,15 @@ public class ItemRowAdapter extends MutableObjectAdapter<Object> {
     }
 
     public ItemRowAdapter(Context context, GetUpcomingEpisodesRequest query, Presenter presenter, MutableObjectAdapter<Row> parent) {
+        this(context, query, false, presenter, parent);
+    }
+
+    public ItemRowAdapter(Context context, GetUpcomingEpisodesRequest query, boolean preferParentThumb, Presenter presenter, MutableObjectAdapter<Row> parent) {
         super(presenter);
         this.context = context;
         mParent = parent;
         mUpcomingQuery = query;
+        this.preferParentThumb = preferParentThumb;
         queryType = QueryType.Upcoming;
     }
 
