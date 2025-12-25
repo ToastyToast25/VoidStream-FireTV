@@ -108,7 +108,7 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 
 	// Store rows for refreshing
 	private var currentRows = mutableListOf<HomeFragmentRow>()
-	private var playlistRow: HomeFragmentMoonfinPlaylistRow? = null
+	private var watchlistRow: HomeFragmentWatchlistRow? = null
 
 	// Debouncer for selection updates - only update UI after user stops navigating
 	private val selectionDebouncer by lazy { Debouncer(150.milliseconds, lifecycleScope) }
@@ -195,12 +195,12 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 						mergedRowAdded = true
 					}
 				}
-				HomeSectionType.PLAYLIST -> {
-					val playlistRow = helper.loadPlaylists()
-					if (playlistRow is HomeFragmentMoonfinPlaylistRow) {
-						this@HomeRowsFragment.playlistRow = playlistRow
+				HomeSectionType.WATCHLIST -> {
+					val row = helper.loadWatchlist()
+					if (row is HomeFragmentWatchlistRow) {
+						this@HomeRowsFragment.watchlistRow = row
+						rows.add(row)
 					}
-					rows.add(playlistRow)
 				}
 				HomeSectionType.LIVE_TV -> if (includeLiveTvRows) {
 					rows.add(liveTVRow)
@@ -378,8 +378,8 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 				else rowAdapter?.ReRetrieveIfNeeded()
 			}
 
-			// Refresh playlist row
-			playlistRow?.refresh()
+			// Refresh watchlist row
+			watchlistRow?.refresh()
 		}
 	}
 

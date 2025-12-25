@@ -35,6 +35,7 @@ import androidx.leanback.widget.RowPresenter;
 import androidx.lifecycle.Lifecycle;
 
 import org.jellyfin.androidtv.R;
+import org.jellyfin.androidtv.auth.repository.ServerRepository;
 import org.jellyfin.androidtv.auth.repository.UserRepository;
 import org.jellyfin.androidtv.constant.CustomMessage;
 import org.jellyfin.androidtv.constant.ImageType;
@@ -46,6 +47,7 @@ import org.jellyfin.androidtv.data.querying.GetAdditionalPartsRequest;
 import org.jellyfin.androidtv.data.querying.GetSpecialsRequest;
 import org.jellyfin.androidtv.data.querying.GetTrailersRequest;
 import org.jellyfin.androidtv.data.repository.CustomMessageRepository;
+import org.jellyfin.androidtv.data.repository.LocalWatchlistRepository;
 import org.jellyfin.androidtv.data.service.BackgroundService;
 import org.jellyfin.androidtv.data.service.BlurContext;
 import org.jellyfin.androidtv.databinding.FragmentFullDetailsBinding;
@@ -161,6 +163,8 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
     private final Lazy<ImageHelper> imageHelper = inject(ImageHelper.class);
     private final Lazy<InteractionTrackerViewModel> interactionTracker = inject(InteractionTrackerViewModel.class);
     private final Lazy<org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer> themeMusicPlayer = inject(org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer.class);
+    private final Lazy<LocalWatchlistRepository> watchlistRepository = inject(LocalWatchlistRepository.class);
+    private final Lazy<ServerRepository> serverRepository = inject(ServerRepository.class);
 
     @Nullable
     @Override
@@ -797,78 +801,63 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         }
     }
 
-    void addToMoonfinPlaylist(UUID itemId) {
-        new Thread(() -> {
-            ApiClient api = KoinJavaComponent.get(ApiClient.class);
-            org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager playlistManager = 
-                new org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager(api);
-            
-            try {
-                boolean success = kotlinx.coroutines.BuildersKt.runBlocking(
-                    kotlinx.coroutines.Dispatchers.getIO(),
-                    (coroutineScope, continuation) -> playlistManager.addToMoonfinPlaylist(itemId, continuation)
-                );
-                
-                requireActivity().runOnUiThread(() -> {
-                    if (success) {
-                        Utils.showToast(requireContext(), getString(R.string.msg_added_to_watch_list));
-                        // Update button to remove state
-                        mAddToPlaylistButton.setIcon(R.drawable.ic_decrease, null);
-                        mAddToPlaylistButton.setLabel(getString(R.string.lbl_remove_from_watch_list));
-                        mAddToPlaylistButton.setActivated(false);
-                        mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                removeFromMoonfinPlaylist(itemId);
-                            }
-                        });
-                    } else {
-                        Utils.showToast(requireContext(), getString(R.string.msg_failed_to_add_to_watch_list));
-                    }
-                });
-            } catch (Exception e) {
-                requireActivity().runOnUiThread(() -> {
-                    Utils.showToast(requireContext(), getString(R.string.msg_failed_to_add_to_watch_list));
-                });
-            }
-        }).start();
+    void addToWatchlist(UUID itemId) {
+        org.jellyfin.androidtv.auth.model.Server server = serverRepository.getValue().getCurrentServer().getValue();
+        if (server == null) {
+            Utils.showToast(requireContext(), getString(R.string.msg_failed_to_add_to_watch_list));
+            return;
+        }
+        
+        boolean success = watchlistRepository.getValue().addToWatchlist(itemId, server.getId());
+        
+        if (success) {
+            Utils.showToast(requireContext(), getString(R.string.msg_added_to_watch_list));
+            // Update button to remove state
+            mAddToPlaylistButton.setIcon(R.drawable.ic_decrease, null);
+            mAddToPlaylistButton.setLabel(getString(R.string.lbl_remove_from_watch_list));
+            mAddToPlaylistButton.setActivated(false);
+            mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    removeFromWatchlist(itemId);
+                }
+            });
+        } else {
+            // Item already in watchlist - just update button to remove state
+            mAddToPlaylistButton.setIcon(R.drawable.ic_decrease, null);
+            mAddToPlaylistButton.setLabel(getString(R.string.lbl_remove_from_watch_list));
+            mAddToPlaylistButton.setActivated(false);
+            mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    removeFromWatchlist(itemId);
+                }
+            });
+        }
     }
 
-    void removeFromMoonfinPlaylist(UUID itemId) {
-        new Thread(() -> {
-            ApiClient api = KoinJavaComponent.get(ApiClient.class);
-            org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager playlistManager = 
-                new org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager(api);
-            
-            try {
-                boolean success = kotlinx.coroutines.BuildersKt.runBlocking(
-                    kotlinx.coroutines.Dispatchers.getIO(),
-                    (coroutineScope, continuation) -> playlistManager.removeFromMoonfinPlaylist(itemId, continuation)
-                );
-                
-                requireActivity().runOnUiThread(() -> {
-                    if (success) {
-                        Utils.showToast(requireContext(), getString(R.string.msg_removed_from_watch_list));
-                        // Update button to add state
-                        mAddToPlaylistButton.setIcon(R.drawable.ic_add, null);
-                        mAddToPlaylistButton.setLabel(getString(R.string.lbl_add_to_watch_list));
-                        mAddToPlaylistButton.setActivated(false);
-                        mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                addToMoonfinPlaylist(itemId);
-                            }
-                        });
-                    } else {
-                        Utils.showToast(requireContext(), getString(R.string.msg_failed_to_remove_from_watch_list));
-                    }
-                });
-            } catch (Exception e) {
-                requireActivity().runOnUiThread(() -> {
-                    Utils.showToast(requireContext(), getString(R.string.msg_failed_to_remove_from_watch_list));
-                });
+    void removeFromWatchlist(UUID itemId) {
+        org.jellyfin.androidtv.auth.model.Server server = serverRepository.getValue().getCurrentServer().getValue();
+        if (server == null) {
+            Utils.showToast(requireContext(), getString(R.string.msg_failed_to_remove_from_watch_list));
+            return;
+        }
+        
+        boolean success = watchlistRepository.getValue().removeFromWatchlist(itemId, server.getId());
+        
+        if (success) {
+            Utils.showToast(requireContext(), getString(R.string.msg_removed_from_watch_list));
+        }
+        // Always update button to add state after removal
+        mAddToPlaylistButton.setIcon(R.drawable.ic_add, null);
+        mAddToPlaylistButton.setLabel(getString(R.string.lbl_add_to_watch_list));
+        mAddToPlaylistButton.setActivated(false);
+        mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                addToWatchlist(itemId);
             }
-        }).start();
+        });
     }
 
     void gotoSeries() {
@@ -1027,60 +1016,35 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                     mDetailsOverviewRow.addAction(subtitleButton);
                 }
                 
-                // Add to Watch List button - only show if playlist home section is active
+                // Add to Watch List button
                 org.jellyfin.androidtv.preference.UserSettingPreferences userSettingPreferences = 
                     org.koin.java.KoinJavaComponent.get(org.jellyfin.androidtv.preference.UserSettingPreferences.class);
                 java.util.List<org.jellyfin.androidtv.constant.HomeSectionType> activeHomeSections = 
                     userSettingPreferences.getActiveHomesections();
                 
-                timber.log.Timber.d("Checking Add to Watch List button - activeHomeSections=" + activeHomeSections + ", contains PLAYLIST=" + activeHomeSections.contains(org.jellyfin.androidtv.constant.HomeSectionType.PLAYLIST));
-                
-                if (activeHomeSections.contains(org.jellyfin.androidtv.constant.HomeSectionType.PLAYLIST)) {
+                if (activeHomeSections.contains(org.jellyfin.androidtv.constant.HomeSectionType.WATCHLIST)) {
                     timber.log.Timber.d("Creating watch list button for item: " + mBaseItem.getId());
-                    // Create button immediately with add icon, will check if in playlist asynchronously
-                    mAddToPlaylistButton = TextUnderButton.create(requireContext(), R.drawable.ic_add, buttonSize, 0, getString(R.string.lbl_add_to_watch_list), new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            addToMoonfinPlaylist(mBaseItem.getId());
-                        }
-                    });
-                    mDetailsOverviewRow.addAction(mAddToPlaylistButton);
-                    timber.log.Timber.d("Watch list button added to details row");
                     
-                    // Check if item is already in playlist and update button icon asynchronously
-                    new Thread(() -> {
-                        try {
-                            ApiClient api = KoinJavaComponent.get(ApiClient.class);
-                            org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager playlistManager = 
-                                new org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager(api);
-                            
-                            boolean isInPlaylist = kotlinx.coroutines.BuildersKt.runBlocking(
-                                kotlinx.coroutines.Dispatchers.getIO(),
-                                (coroutineScope, continuation) -> playlistManager.isItemInPlaylist(mBaseItem.getId(), continuation)
-                            );
-                            
-                            timber.log.Timber.d("Item in playlist: " + isInPlaylist);
-                            
-                            if (isInPlaylist) {
-                                requireActivity().runOnUiThread(() -> {
-                                    // Update button to show remove
-                                    mAddToPlaylistButton.setIcon(R.drawable.ic_decrease, null);
-                                    mAddToPlaylistButton.setLabel(getString(R.string.lbl_remove_from_watch_list));
-                                    mAddToPlaylistButton.setActivated(false);
-                                    // Update click listener
-                                    mAddToPlaylistButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            removeFromMoonfinPlaylist(mBaseItem.getId());
-                                        }
-                                    });
-                                    timber.log.Timber.d("Updated watch list button to remove state");
-                                });
+                    org.jellyfin.androidtv.auth.model.Server server = serverRepository.getValue().getCurrentServer().getValue();
+                    boolean isInWatchlist = server != null && 
+                        watchlistRepository.getValue().isInWatchlist(mBaseItem.getId(), server.getId());
+                    
+                    if (isInWatchlist) {
+                        mAddToPlaylistButton = TextUnderButton.create(requireContext(), R.drawable.ic_decrease, buttonSize, 0, getString(R.string.lbl_remove_from_watch_list), new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                removeFromWatchlist(mBaseItem.getId());
                             }
-                        } catch (Exception e) {
-                            timber.log.Timber.e(e, "Error checking if item in playlist");
-                        }
-                    }).start();
+                        });
+                    } else {
+                        mAddToPlaylistButton = TextUnderButton.create(requireContext(), R.drawable.ic_add, buttonSize, 0, getString(R.string.lbl_add_to_watch_list), new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                addToWatchlist(mBaseItem.getId());
+                            }
+                        });
+                    }
+                    mDetailsOverviewRow.addAction(mAddToPlaylistButton);
                 } else {
                     timber.log.Timber.d("Watch List section not active, skipping button");
                 }

@@ -1,16 +1,15 @@
 package org.jellyfin.androidtv.ui.home
 
 import android.content.Context
-import kotlinx.coroutines.runBlocking
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.constant.ChangeTriggerType
 import org.jellyfin.androidtv.constant.HomeSectionType
-import org.jellyfin.androidtv.constant.QueryType
 import org.jellyfin.androidtv.data.repository.ItemRepository
+import org.jellyfin.androidtv.data.repository.LocalWatchlistRepository
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.browsing.BrowseRowDef
-import org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
@@ -31,6 +30,8 @@ class HomeFragmentHelper(
 ) : KoinComponent {
 	private val userPreferences by inject<UserPreferences>()
 	private val api by inject<ApiClient>()
+	private val serverRepository by inject<ServerRepository>()
+	private val watchlistRepository by inject<LocalWatchlistRepository>()
 
 	fun loadRecentlyAdded(userViews: Collection<BaseItemDto>): HomeFragmentRow {
 		// Check if multi-server is enabled
@@ -187,31 +188,9 @@ class HomeFragmentHelper(
 		return HomeFragmentBrowseRowDefRow(BrowseRowDef(context.getString(R.string.lbl_on_now), query, HOME_ROW_CHUNK_SIZE))
 	}
 
-	fun loadPlaylists(): HomeFragmentRow {
-		// Get or create Moonfin playlist and return its items
-		val playlistManager = MoonfinPlaylistManager(api)
-		
-		// Try to get the playlist ID synchronously (this will create it if needed)
-		val playlistId = runBlocking {
-			playlistManager.getOrCreateMoonfinPlaylist()
-		}
-
-		return if (playlistId != null) {
-			HomeFragmentMoonfinPlaylistRow(context, playlistId, api)
-		} else {
-			// Fallback to empty row if playlist creation fails
-			HomeFragmentBrowseRowDefRow(
-				BrowseRowDef(
-					context.getString(R.string.lbl_playlists),
-					org.jellyfin.androidtv.ui.browsing.BrowsingUtils.createPlaylistsRequest(),
-					60,
-					false,
-					true,
-					arrayOf(ChangeTriggerType.LibraryUpdated),
-					QueryType.AudioPlaylists
-				)
-			)
-		}
+	fun loadWatchlist(): HomeFragmentRow? {
+		val serverId = serverRepository.currentServer.value?.id ?: return null
+		return HomeFragmentWatchlistRow(context, api, serverId, watchlistRepository)
 	}
 
 	companion object {

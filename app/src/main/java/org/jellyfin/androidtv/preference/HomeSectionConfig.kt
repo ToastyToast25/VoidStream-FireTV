@@ -53,7 +53,7 @@ data class HomeSectionConfig(
 			HomeSectionConfig(HomeSectionType.RESUME_AUDIO, enabled = false, order = 7),
 			HomeSectionConfig(HomeSectionType.RESUME_BOOK, enabled = false, order = 8),
 			HomeSectionConfig(HomeSectionType.ACTIVE_RECORDINGS, enabled = false, order = 9),
-			HomeSectionConfig(HomeSectionType.PLAYLIST, enabled = false, order = 10),
+			HomeSectionConfig(HomeSectionType.WATCHLIST, enabled = false, order = 10),
 		)
 	}
 }

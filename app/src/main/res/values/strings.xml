@@ -165,6 +165,7 @@
     <string name="lbl_enable_cinema_mode">Cinema mode</string>
     <string name="sum_enable_cinema_mode">Play available intros and previews before starting a movie</string>
     <string name="lbl_playlists">Playlists</string>
+    <string name="lbl_watch_list">Watch List</string>
     <string name="msg_items_added">" items added"</string>
     <string name="lbl_add_to_queue">Add to queue</string>
     <string name="lbl_add_to_watch_list">Add to Watch List</string>
@@ -449,7 +450,7 @@
     <string name="home_section_resume_audio">Continue listening</string>
     <string name="home_section_active_recordings">Active recordings</string>
     <string name="home_section_next_up">Next up</string>
-    <string name="home_section_playlist">Playlists</string>
+    <string name="home_section_watchlist">Watch List</string>
     <string name="home_section_livetv">Live TV</string>
     <string name="home_section_resume_book">Continue reading</string>
     <string name="home_section_none">None</string>

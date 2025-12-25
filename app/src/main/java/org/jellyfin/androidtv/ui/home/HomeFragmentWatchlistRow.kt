@@ -9,17 +9,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.data.repository.LocalWatchlistRepository
 import org.jellyfin.androidtv.ui.itemhandling.BaseItemDtoBaseRowItem
-import org.jellyfin.androidtv.ui.playback.MoonfinPlaylistManager
 import org.jellyfin.androidtv.ui.presentation.CardPresenter
 import org.jellyfin.androidtv.ui.presentation.MutableObjectAdapter
 import org.jellyfin.sdk.api.client.ApiClient
 import java.util.UUID
 
-class HomeFragmentMoonfinPlaylistRow(
+class HomeFragmentWatchlistRow(
 	private val context: Context,
-	private val playlistId: UUID,
-	private val api: ApiClient
+	private val api: ApiClient,
+	private val serverId: UUID,
+	private val watchlistRepository: LocalWatchlistRepository
 ) : HomeFragmentRow {
 	private var row: ListRow? = null
 	private var listRowAdapter: MutableObjectAdapter<Any>? = null
@@ -30,38 +31,31 @@ class HomeFragmentMoonfinPlaylistRow(
 		rowsAdapter: MutableObjectAdapter<Row>
 	) {
 		listRowAdapter = MutableObjectAdapter(cardPresenter)
-		val header = HeaderItem("Watch List")
+		val header = HeaderItem(context.getString(R.string.lbl_watch_list))
 		row = ListRow(header, listRowAdapter!!)
 		rowsAdapter.add(row!!)
 
-		// Load playlist items asynchronously
 		CoroutineScope(Dispatchers.Main).launch {
-			loadPlaylistItems(listRowAdapter!!)
+			loadWatchlistItems(listRowAdapter!!)
 		}
 	}
 
 	fun refresh() {
 		listRowAdapter?.let { adapter ->
 			CoroutineScope(Dispatchers.Main).launch {
-				// Clear existing items
 				adapter.clear()
-				// Reload items
-				loadPlaylistItems(adapter)
+				loadWatchlistItems(adapter)
 			}
 		}
 	}
 
-	private suspend fun loadPlaylistItems(adapter: MutableObjectAdapter<Any>) {
-		// Load items on IO thread
+	private suspend fun loadWatchlistItems(adapter: MutableObjectAdapter<Any>) {
 		val items = withContext(Dispatchers.IO) {
-			val playlistManager = MoonfinPlaylistManager(api)
-			playlistManager.getMoonfinPlaylistItems()
+			watchlistRepository.getWatchlistItems(api, serverId)
 		}
 		
-		// Add to adapter on Main thread
 		items.forEach { item ->
 			adapter.add(BaseItemDtoBaseRowItem(item))
 		}
 	}
 }
-
