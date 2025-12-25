@@ -9,7 +9,8 @@
 
 [![License](https://img.shields.io/github/license/Moonfin-Client/AndroidTV-FireTV.svg)](https://github.com/Moonfin-Client/AndroidTV-FireTV)
 [![Release](https://img.shields.io/github/release/Moonfin-Client/AndroidTV-FireTV.svg)](https://github.com/Moonfin-Client/AndroidTV-FireTV/releases)
-<a href="https://www.buymeacoffee.com/moonfin" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 30px !important;width: 108 !important;" ></a>
+
+<a href="https://www.buymeacoffee.com/moonfin" target="_blank"><img src="https://github.com/user-attachments/assets/fe26eaec-147f-496f-8e95-4ebe19f57131" alt="Buy Me A Coffee" ></a>
 
 > **[← Back to main Moonfin project](https://github.com/Moonfin-Client)**
 
@@ -19,18 +20,23 @@ Moonfin for Android TV is an enhanced fork of the official Jellyfin Android TV c
 
 Moonfin for Android TV builds on the solid foundation of Jellyfin with targeted improvements for TV viewing:
 
-### 🎬 Jellyseerr Integration (Beta)
-**The first and only native Jellyfin client with Jellyseerr support!**
-- Browse trending, popular, and recommended movies/TV shows from TMDB
-- Request content in HD or 4K with a single button press
-- **NSFW Content Filtering** - Automatically filters adult content using TMDB flags, keyword detection, and server blacklist integration (configurable in settings)
-- **Quality Profile Selection** - Choose specific quality profiles (4K, 1080p, etc.) when making requests
-- Smart season selection for TV shows where you pick exactly which seasons you want
-- Track all your requests (pending, approved, available) in one place
-- Seamless authentication using your Jellyfin credentials with permanent local API keys
-- Global search integration with Jellyseerr results appearing automatically alongside your Jellyfin media
-- **Play in Moonfin Button** - Direct navigation from Jellyseerr to play available content in your library
-- Beautiful backdrop images for the Jellyseer discovery experience
+### Cross-Server Content Playback
+- **Unified Library Support** - Seamless playback from multiple Jellyfin servers
+- Seamless switching between servers for content playback
+- Improved server selection logic
+
+### Jellyseerr Integration (Beta)
+
+Moonfin is the first Android TV client with native Jellyseerr support.
+
+- Browse trending, popular, and recommended movies/shows and filter content by Series/Movie Genres, Studio, Network, and keywords
+- Request content in HD or 4K directly from your Roku  
+- **NSFW Content Filtering** (optional) using Jellyseerr/TMDB metadata  
+- Smart season selection when requesting TV shows  
+- View all your pending, approved, and available requests  
+- Authenticate using your Jellyfin login (permanent local API key saved)  
+- Global search includes Jellyseerr results  
+- Rich backdrop images for a more cinematic discovery experience  
 
 ### 🛠️ Customizable Toolbar
 - **Toggle buttons** - Show/hide Shuffle, Genres, and Favorites buttons
