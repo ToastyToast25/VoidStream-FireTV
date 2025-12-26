@@ -361,6 +361,13 @@ class HomeRowsFragment : RowsSupportFragment(), AudioEventListener, View.OnKeyLi
 		}, 100) // Small delay to let the fragment fully resume
 	}
 
+	override fun onPause() {
+		super.onPause()
+		
+		// Stop theme music when fragment is paused (e.g., user switches to another app)
+		themeMusicPlayer.fadeOutAndStop()
+	}
+
 	override fun onQueueStatusChanged(hasQueue: Boolean) {
 		if (activity == null || requireActivity().isFinishing) return
 

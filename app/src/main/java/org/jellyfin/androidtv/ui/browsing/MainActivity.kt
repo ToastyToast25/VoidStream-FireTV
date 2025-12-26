@@ -35,6 +35,7 @@ import org.jellyfin.androidtv.ui.InteractionTrackerViewModel
 import org.jellyfin.androidtv.ui.background.AppBackground
 import org.jellyfin.androidtv.ui.navigation.NavigationAction
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
+import org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer
 import org.jellyfin.androidtv.ui.screensaver.InAppScreensaver
 import org.jellyfin.androidtv.ui.settings.compat.MainActivitySettings
 import org.jellyfin.androidtv.ui.startup.StartupActivity
@@ -52,6 +53,7 @@ class MainActivity : FragmentActivity() {
 	private val workManager by inject<WorkManager>()
 	private val updateCheckerService by inject<UpdateCheckerService>()
 	private val userPreferences by inject<UserPreferences>()
+	private val themeMusicPlayer by inject<ThemeMusicPlayer>()
 
 	private lateinit var binding: ActivityMainBinding
 	private var exitConfirmationDialog: AlertDialog? = null
@@ -170,6 +172,9 @@ class MainActivity : FragmentActivity() {
 
 	override fun onStop() {
 		super.onStop()
+
+		// Stop theme music when app goes to background
+		themeMusicPlayer.stop()
 
 		workManager.enqueue(OneTimeWorkRequestBuilder<LeanbackChannelWorker>().build())
 
