@@ -842,7 +842,8 @@
     <string name="enabled">Enabled</string>
     <string name="disabled">Disabled</string>
     
-    <!-- Visual Settings -->
+    <!-- Appearance Settings -->
+    <string name="pref_appearance">Appearance</string>
     <string name="pref_visual_settings">Visual Settings</string>
     <string name="pref_background_blur_amount">Background Blur Amount</string>
     <string name="pref_background_blur_amount_description">Control blur intensity for all background images across the app</string>

@@ -23,7 +23,7 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 	override val screen by optionsScreen {
 		setTitle(R.string.moonfin_settings)
 
-		// Toolbar Customization
+		// Toolbar
 		category {
 			setTitle(R.string.pref_toolbar_customization)
 
@@ -53,7 +53,6 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 
 			list {
 				setTitle(R.string.pref_shuffle_content_type)
-				
 				entries = mapOf(
 					"movies" to getString(R.string.pref_shuffle_movies),
 					"tv" to getString(R.string.pref_shuffle_tv),
@@ -84,32 +83,6 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 				setContent(R.string.pref_confirm_exit_description)
 				bind(userPreferences, UserPreferences.confirmExit)
 			}
-			
-			link {
-				setTitle(R.string.pref_parental_controls)
-				setContent(R.string.pref_parental_controls_description)
-				icon = R.drawable.ic_lock
-				withFragment<ParentalControlsPreferencesScreen>()
-			}
-
-			list {
-				setTitle(R.string.pref_seasonal_surprise)
-				entries = mapOf(
-					"none" to getString(R.string.pref_seasonal_none),
-					"winter" to getString(R.string.pref_seasonal_winter),
-					"spring" to getString(R.string.pref_seasonal_spring),
-					"summer" to getString(R.string.pref_seasonal_summer),
-					"halloween" to getString(R.string.pref_seasonal_halloween),
-					"fall" to getString(R.string.pref_seasonal_fall)
-				)
-				bind(userPreferences, UserPreferences.seasonalSurprise)
-			}
-
-			checkbox {
-				setTitle(R.string.pref_subtitles_default_to_none)
-				setContent(R.string.pref_subtitles_default_to_none_description)
-				bind(userPreferences, UserPreferences.subtitlesDefaultToNone)
-			}
 		}
 
 		// Media Bar Settings
@@ -130,7 +103,6 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 					"both" to getString(R.string.pref_shuffle_both)
 				)
 				bind(userSettingPreferences, UserSettingPreferences.mediaBarContentType)
-				
 				depends { userSettingPreferences[UserSettingPreferences.mediaBarEnabled] }
 			}
 
@@ -142,26 +114,24 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 					"15" to getString(R.string.pref_media_bar_15_items)
 				)
 				bind(userSettingPreferences, UserSettingPreferences.mediaBarItemCount)
-				
 				depends { userSettingPreferences[UserSettingPreferences.mediaBarEnabled] }
 			}
 
-		seekbar {
-			setTitle(R.string.pref_media_bar_overlay_opacity)
-			setContent(R.string.pref_media_bar_overlay_opacity_summary)
-			min = 10
-			max = 90
-			increment = 5
-			valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
-				override fun display(value: Int) = "$value%"
+			seekbar {
+				setTitle(R.string.pref_media_bar_overlay_opacity)
+				setContent(R.string.pref_media_bar_overlay_opacity_summary)
+				min = 10
+				max = 90
+				increment = 5
+				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
+					override fun display(value: Int) = "$value%"
+				}
+				bind(userSettingPreferences, UserSettingPreferences.mediaBarOverlayOpacity)
+				depends { userSettingPreferences[UserSettingPreferences.mediaBarEnabled] }
 			}
-			bind(userSettingPreferences, UserSettingPreferences.mediaBarOverlayOpacity)
-			
-			depends { userSettingPreferences[UserSettingPreferences.mediaBarEnabled] }
-		}
 
-		list {
-			setTitle(R.string.pref_media_bar_overlay_color)
+			list {
+				setTitle(R.string.pref_media_bar_overlay_color)
 				entries = mapOf(
 					"black" to getString(R.string.pref_media_bar_color_black),
 					"gray" to getString(R.string.pref_media_bar_color_gray),
@@ -177,7 +147,6 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 					"indigo" to getString(R.string.pref_media_bar_color_indigo)
 				)
 				bind(userSettingPreferences, UserSettingPreferences.mediaBarOverlayColor)
-				
 				depends { userSettingPreferences[UserSettingPreferences.mediaBarEnabled] }
 			}
 		}
@@ -196,7 +165,6 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 				setTitle(R.string.pref_theme_music_on_home_rows)
 				setContent(R.string.pref_theme_music_on_home_rows_summary)
 				bind(userSettingPreferences, UserSettingPreferences.themeMusicOnHomeRows)
-				
 				depends { userSettingPreferences[UserSettingPreferences.themeMusicEnabled] }
 			}
 
@@ -210,46 +178,27 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 					override fun display(value: Int) = "$value%"
 				}
 				bind(userSettingPreferences, UserSettingPreferences.themeMusicVolume)
-				
 				depends { userSettingPreferences[UserSettingPreferences.themeMusicEnabled] }
 			}
 		}
 
-		// Screensaver
+		// Appearance
 		category {
-			setTitle(R.string.pref_screensaver)
+			setTitle(R.string.pref_appearance)
 
 			list {
-				setTitle(R.string.pref_screensaver_mode)
-				
+				setTitle(R.string.pref_seasonal_surprise)
 				entries = mapOf(
-					"library" to getString(R.string.pref_screensaver_mode_library),
-					"logo" to getString(R.string.pref_screensaver_mode_logo)
+					"none" to getString(R.string.pref_seasonal_none),
+					"winter" to getString(R.string.pref_seasonal_winter),
+					"spring" to getString(R.string.pref_seasonal_spring),
+					"summer" to getString(R.string.pref_seasonal_summer),
+					"halloween" to getString(R.string.pref_seasonal_halloween),
+					"fall" to getString(R.string.pref_seasonal_fall)
 				)
-				
-				bind(userPreferences, UserPreferences.screensaverMode)
+				bind(userPreferences, UserPreferences.seasonalSurprise)
 			}
 
-			seekbar {
-				setTitle(R.string.pref_screensaver_dimming)
-				setContent(R.string.pref_screensaver_dimming_level_description)
-				min = 0
-				max = 100
-				increment = 5
-				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
-					override fun display(value: Int) = if (value == 0) "Off" else "$value%"
-				}
-
-				bind(userPreferences, UserPreferences.screensaverDimmingLevel)
-
-				depends { userPreferences[UserPreferences.screensaverInAppEnabled] }
-			}
-		}
-
-		// Visual Settings
-		category {
-			setTitle(R.string.pref_visual_settings)
-			
 			link {
 				setTitle(R.string.pref_home_rows_image_type)
 				icon = R.drawable.ic_grid
@@ -274,7 +223,7 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 				}
 				bind(userSettingPreferences, UserSettingPreferences.detailsBackgroundBlurAmount)
 			}
-			
+
 			seekbar {
 				setTitle(R.string.pref_browsing_background_blur_amount)
 				setContent(R.string.pref_browsing_background_blur_amount_description)
@@ -292,6 +241,46 @@ class MoonfinPreferencesScreen : OptionsFragment() {
 					}
 				}
 				bind(userSettingPreferences, UserSettingPreferences.browsingBackgroundBlurAmount)
+			}
+
+			list {
+				setTitle(R.string.pref_screensaver_mode)
+				entries = mapOf(
+					"library" to getString(R.string.pref_screensaver_mode_library),
+					"logo" to getString(R.string.pref_screensaver_mode_logo)
+				)
+				bind(userPreferences, UserPreferences.screensaverMode)
+			}
+
+			seekbar {
+				setTitle(R.string.pref_screensaver_dimming)
+				setContent(R.string.pref_screensaver_dimming_level_description)
+				min = 0
+				max = 100
+				increment = 5
+				valueFormatter = object : DurationSeekBarPreference.ValueFormatter() {
+					override fun display(value: Int) = if (value == 0) "Off" else "$value%"
+				}
+				bind(userPreferences, UserPreferences.screensaverDimmingLevel)
+				depends { userPreferences[UserPreferences.screensaverInAppEnabled] }
+			}
+		}
+
+		// Playback
+		category {
+			setTitle(R.string.pref_playback)
+
+			checkbox {
+				setTitle(R.string.pref_subtitles_default_to_none)
+				setContent(R.string.pref_subtitles_default_to_none_description)
+				bind(userPreferences, UserPreferences.subtitlesDefaultToNone)
+			}
+
+			link {
+				setTitle(R.string.pref_parental_controls)
+				setContent(R.string.pref_parental_controls_description)
+				icon = R.drawable.ic_lock
+				withFragment<ParentalControlsPreferencesScreen>()
 			}
 		}
 	}
