@@ -17,8 +17,6 @@ import org.jellyfin.androidtv.ui.settings.screen.authentication.SettingsAuthenti
 import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsAppThemeScreen
 import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsClockBehaviorScreen
 import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsRatingTypeScreen
-import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsScreensaverAgeRatingMaxScreen
-import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsScreensaverTimeoutScreen
 import org.jellyfin.androidtv.ui.settings.screen.customization.SettingsWatchedIndicatorBehaviorScreen
 import org.jellyfin.androidtv.ui.settings.screen.customization.subtitle.SettingsSubtitleTextStrokeColorScreen
 import org.jellyfin.androidtv.ui.settings.screen.customization.subtitle.SettingsSubtitlesBackgroundColorScreen
@@ -27,12 +25,16 @@ import org.jellyfin.androidtv.ui.settings.screen.customization.subtitle.Settings
 import org.jellyfin.androidtv.ui.settings.screen.license.SettingsLicenseScreen
 import org.jellyfin.androidtv.ui.settings.screen.license.SettingsLicensesScreen
 import org.jellyfin.androidtv.ui.settings.screen.playback.SettingsPlaybackInactivityPromptScreen
+import org.jellyfin.androidtv.ui.settings.screen.playback.SettingsPlaybackPlayerScreen
 import org.jellyfin.androidtv.ui.settings.screen.playback.SettingsPlaybackPrerollsScreen
 import org.jellyfin.androidtv.ui.settings.screen.playback.SettingsPlaybackScreen
 import org.jellyfin.androidtv.ui.settings.screen.playback.mediasegment.SettingsPlaybackMediaSegmentScreen
 import org.jellyfin.androidtv.ui.settings.screen.playback.mediasegment.SettingsPlaybackMediaSegmentsScreen
 import org.jellyfin.androidtv.ui.settings.screen.playback.nextup.SettingsPlaybackNextUpBehaviorScreen
 import org.jellyfin.androidtv.ui.settings.screen.playback.nextup.SettingsPlaybackNextUpScreen
+import org.jellyfin.androidtv.ui.settings.screen.screensaver.SettingsScreensaverAgeRatingScreen
+import org.jellyfin.androidtv.ui.settings.screen.screensaver.SettingsScreensaverScreen
+import org.jellyfin.androidtv.ui.settings.screen.screensaver.SettingsScreensaverTimeoutScreen
 import org.jellyfin.sdk.model.api.MediaSegmentType
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 
@@ -44,18 +46,20 @@ object Routes {
 	const val AUTHENTICATION_SERVER_USER = "/authentication/server/{serverId}/user/{userId}"
 	const val AUTHENTICATION_SORT_BY = "/authentication/sort-by"
 	const val AUTHENTICATION_AUTO_SIGN_IN = "/authentication/auto-sign-in"
-const val CUSTOMIZATION = "/customization"
+	const val CUSTOMIZATION = "/customization"
 	const val CUSTOMIZATION_APP_THEME = "/customization/app-theme"
 	const val CUSTOMIZATION_CLOCK_BEHAVIOR = "/customization/clock-behavior"
 	const val CUSTOMIZATION_WATCHED_INDICATOR_BEHAVIOR = "/customization/watched-indicator-behavior"
 	const val CUSTOMIZATION_RATING_TYPE = "/customization/rating-type"
-	const val CUSTOMIZATION_SCREENSAVER_TIMEOUT = "/customization/screensaver-timeout"
-	const val CUSTOMIZATION_SCREENSAVER_AGE_RATING_MAX = "/customization/screensaver-age-rating-max"
+	const val CUSTOMIZATION_SCREENSAVER = "/customization/screensaver"
+	const val CUSTOMIZATION_SCREENSAVER_TIMEOUT = "/customization/screensaver/timeout"
+	const val CUSTOMIZATION_SCREENSAVER_AGE_RATING = "/customization/screensaver/age-rating"
 	const val CUSTOMIZATION_SUBTITLES = "/customization/subtitles"
 	const val CUSTOMIZATION_SUBTITLES_TEXT_COLOR = "/customization/subtitles/text-color"
 	const val CUSTOMIZATION_SUBTITLES_BACKGROUND_COLOR = "/customization/subtitles/background-color"
 	const val CUSTOMIZATION_SUBTITLES_EDGE_COLOR = "/customization/subtitles/edge-color"
 	const val PLAYBACK = "/playback"
+	const val PLAYBACK_PLAYER = "/playback/player"
 	const val PLAYBACK_NEXT_UP = "/playback/next-up"
 	const val PLAYBACK_NEXT_UP_BEHAVIOR = "/playback/next-up/behavior"
 	const val PLAYBACK_INACTIVITY_PROMPT = "/playback/inactivity-prompt"
@@ -99,7 +103,7 @@ val routes = mapOf<String, RouteComposable>(
 	Routes.AUTHENTICATION_AUTO_SIGN_IN to {
 		SettingsAuthenticationAutoSignInScreen()
 	},
-Routes.CUSTOMIZATION to {
+	Routes.CUSTOMIZATION to {
 		CustomizationPreferencesScreen()
 	},
 	Routes.CUSTOMIZATION_APP_THEME to {
@@ -114,11 +118,14 @@ Routes.CUSTOMIZATION to {
 	Routes.CUSTOMIZATION_RATING_TYPE to {
 		SettingsRatingTypeScreen()
 	},
+	Routes.CUSTOMIZATION_SCREENSAVER to {
+		SettingsScreensaverScreen()
+	},
 	Routes.CUSTOMIZATION_SCREENSAVER_TIMEOUT to {
 		SettingsScreensaverTimeoutScreen()
 	},
-	Routes.CUSTOMIZATION_SCREENSAVER_AGE_RATING_MAX to {
-		SettingsScreensaverAgeRatingMaxScreen()
+	Routes.CUSTOMIZATION_SCREENSAVER_AGE_RATING to {
+		SettingsScreensaverAgeRatingScreen()
 	},
 	Routes.CUSTOMIZATION_SUBTITLES to {
 		SettingsSubtitlesScreen()
@@ -134,6 +141,9 @@ Routes.CUSTOMIZATION to {
 	},
 	Routes.PLAYBACK to {
 		SettingsPlaybackScreen()
+	},
+	Routes.PLAYBACK_PLAYER to {
+		SettingsPlaybackPlayerScreen()
 	},
 	Routes.PLAYBACK_NEXT_UP to {
 		SettingsPlaybackNextUpScreen()

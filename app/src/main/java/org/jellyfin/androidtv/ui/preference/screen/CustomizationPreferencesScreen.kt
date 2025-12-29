@@ -98,26 +98,6 @@ fun CustomizationPreferencesScreen() {
 			)
 		}
 
-		item {
-			var premieresEnabled by rememberPreference(userPreferences, UserPreferences.premieresEnabled)
-			ListButton(
-				headingContent = { Text(stringResource(R.string.lbl_show_premieres)) },
-				captionContent = { Text(stringResource(R.string.desc_premieres)) },
-				trailingContent = { Checkbox(checked = premieresEnabled) },
-				onClick = { premieresEnabled = !premieresEnabled }
-			)
-		}
-
-		item {
-			var mediaManagementEnabled by rememberPreference(userPreferences, UserPreferences.mediaManagementEnabled)
-			ListButton(
-				headingContent = { Text(stringResource(R.string.pref_enable_media_management)) },
-				captionContent = { Text(stringResource(R.string.pref_enable_media_management_description)) },
-				trailingContent = { Checkbox(checked = mediaManagementEnabled) },
-				onClick = { mediaManagementEnabled = !mediaManagementEnabled }
-			)
-		}
-
 		// Browsing section
 		item {
 			ListSection(
@@ -213,7 +193,7 @@ fun CustomizationPreferencesScreen() {
 			ListButton(
 				headingContent = { Text(stringResource(R.string.pref_screensaver_ageratingmax)) },
 				captionContent = { Text(ageDisplay) },
-				onClick = { router.push(Routes.CUSTOMIZATION_SCREENSAVER_AGE_RATING_MAX) }
+				onClick = { router.push(Routes.CUSTOMIZATION_SCREENSAVER_AGE_RATING) }
 			)
 		}
 

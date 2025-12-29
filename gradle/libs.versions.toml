@@ -30,7 +30,7 @@ androidx-work = "2.11.0"
 coil = "3.3.0"
 detekt = "1.23.8"
 java-jdk = "21"
-jellyfin-androidx-media = "1.8.0+1"
+jellyfin-androidx-media = "1.9.0+1"
 jellyfin-sdk = "1.8.5"
 koin = "4.1.1"
 koin-compose = "4.1.1"
@@ -76,6 +76,7 @@ androidx-cardview = { module = "androidx.cardview:cardview", version.ref = "andr
 androidx-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "androidx-compose-foundation" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "androidx-compose-material3" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling", version.ref = "androidx-compose-ui" }
+androidx-compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics", version.ref = "androidx-compose-ui" }
 androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "androidx-constraintlayout" }
 androidx-constraintlayout-compose = { module = "androidx.constraintlayout:constraintlayout-compose", version.ref = "androidx-constraintlayout-compose" }
 androidx-core = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
@@ -147,6 +148,7 @@ acra = [
 androidx-compose = [
     "androidx-compose-foundation",
     "androidx-compose-material3",
+    "androidx-compose-ui-graphics",
     "androidx-compose-ui-tooling",
     "androidx-constraintlayout-compose",
 ]
