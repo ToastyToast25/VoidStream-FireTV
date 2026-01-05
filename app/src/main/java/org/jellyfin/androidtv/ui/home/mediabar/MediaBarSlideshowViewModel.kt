@@ -105,11 +105,13 @@ class MediaBarSlideshowViewModel(
 	 * IS_NOT_FOLDER filter for SERIES to properly fetch shows.
 	 * 
 	 * @param apiClient The API client to use for this request (supports multi-server)
+	 * @param userId The user ID for authentication on this specific server
 	 * @param itemType The type of item to fetch (MOVIE or SERIES)
 	 * @param maxItems Maximum number of items to fetch
 	 */
 	private suspend fun fetchItemsFromServer(
 		apiClient: ApiClient,
+		userId: UUID,
 		itemType: BaseItemKind,
 		maxItems: Int
 	): List<BaseItemDto> {
@@ -125,7 +127,7 @@ class MediaBarSlideshowViewModel(
 		val matchingLibraries = try {
 			val viewsResponse by apiClient.itemsApi.getItems(
 				includeItemTypes = setOf(org.jellyfin.sdk.model.api.BaseItemKind.COLLECTION_FOLDER),
-				userId = userRepository.currentUser.value?.id,
+				userId = userId,
 			)
 			viewsResponse.items.orEmpty()
 				.filter { view ->
@@ -211,7 +213,8 @@ class MediaBarSlideshowViewModel(
 			
 			val useMultiServer = loggedInServers.size > 1
 			Timber.d("MediaBar: Loading items from ${loggedInServers.size} server(s), multi-server mode: $useMultiServer")
-
+			// Get current user ID for single-server mode
+			val currentUserId = userRepository.currentUser.value?.id
 			// Fetch items based on user preference
 			val allItemsWithApiClients: List<ItemWithApiClient> = withContext(Dispatchers.IO) {
 				if (useMultiServer) {
@@ -224,11 +227,11 @@ class MediaBarSlideshowViewModel(
 							withTimeoutOrNull(10_000L) {
 								try {
 									val serverItems = when (contentType) {
-										"movies" -> fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer)
-										"tv" -> fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer)
+										"movies" -> fetchItemsFromServer(session.apiClient, session.userId, BaseItemKind.MOVIE, itemsPerServer)
+										"tv" -> fetchItemsFromServer(session.apiClient, session.userId, BaseItemKind.SERIES, itemsPerServer)
 										else -> { // "both"
-											val movies = async { fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer / 2 + 1) }
-											val shows = async { fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer / 2 + 1) }
+											val movies = async { fetchItemsFromServer(session.apiClient, session.userId, BaseItemKind.MOVIE, itemsPerServer / 2 + 1) }
+											val shows = async { fetchItemsFromServer(session.apiClient, session.userId, BaseItemKind.SERIES, itemsPerServer / 2 + 1) }
 											movies.await() + shows.await()
 										}
 									}
@@ -246,16 +249,21 @@ class MediaBarSlideshowViewModel(
 					}.awaitAll().flatten()
 				} else {
 					// Single server: use default API client
-					val serverItems = when (contentType) {
-						"movies" -> fetchItemsFromServer(api, BaseItemKind.MOVIE, config.maxItems)
-						"tv" -> fetchItemsFromServer(api, BaseItemKind.SERIES, config.maxItems)
-						else -> { // "both"
-							val movies = async { fetchItemsFromServer(api, BaseItemKind.MOVIE, config.maxItems) }
-							val shows = async { fetchItemsFromServer(api, BaseItemKind.SERIES, config.maxItems) }
-							movies.await() + shows.await()
+					if (currentUserId == null) {
+						Timber.w("MediaBar: No current user ID, cannot fetch items")
+						emptyList()
+					} else {
+						val serverItems = when (contentType) {
+							"movies" -> fetchItemsFromServer(api, currentUserId, BaseItemKind.MOVIE, config.maxItems)
+							"tv" -> fetchItemsFromServer(api, currentUserId, BaseItemKind.SERIES, config.maxItems)
+							else -> { // "both"
+								val movies = async { fetchItemsFromServer(api, currentUserId, BaseItemKind.MOVIE, config.maxItems) }
+								val shows = async { fetchItemsFromServer(api, currentUserId, BaseItemKind.SERIES, config.maxItems) }
+								movies.await() + shows.await()
+							}
 						}
+						serverItems.map { ItemWithApiClient(it, api) }
 					}
-					serverItems.map { ItemWithApiClient(it, api) }
 				}
 			}
 				.filter { it.item.backdropImageTags?.isNotEmpty() == true }
@@ -508,6 +516,9 @@ class MediaBarSlideshowViewModel(
 				val loggedInServers = multiServerRepository.getLoggedInServers()
 				val useMultiServer = loggedInServers.size > 1
 				
+				// Get current user ID for single-server mode
+				val currentUserId = userRepository.currentUser.value?.id
+				
 				// Fetch new random items (with multi-server support)
 				val newItemsWithApiClients: List<ItemWithApiClient> = if (useMultiServer) {
 					val itemsPerServer = (itemsToReplace / loggedInServers.size).coerceAtLeast(2)
@@ -517,11 +528,11 @@ class MediaBarSlideshowViewModel(
 							withTimeoutOrNull(10_000L) {
 								try {
 									val serverItems = when (contentType) {
-										"movies" -> fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer)
-										"tv" -> fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer)
+										"movies" -> fetchItemsFromServer(session.apiClient, session.userId, BaseItemKind.MOVIE, itemsPerServer)
+										"tv" -> fetchItemsFromServer(session.apiClient, session.userId, BaseItemKind.SERIES, itemsPerServer)
 										else -> {
-											val movies = async { fetchItemsFromServer(session.apiClient, BaseItemKind.MOVIE, itemsPerServer / 2 + 1) }
-											val shows = async { fetchItemsFromServer(session.apiClient, BaseItemKind.SERIES, itemsPerServer / 2 + 1) }
+											val movies = async { fetchItemsFromServer(session.apiClient, session.userId, BaseItemKind.MOVIE, itemsPerServer / 2 + 1) }
+											val shows = async { fetchItemsFromServer(session.apiClient, session.userId, BaseItemKind.SERIES, itemsPerServer / 2 + 1) }
 											movies.await() + shows.await()
 										}
 									}
@@ -537,16 +548,21 @@ class MediaBarSlideshowViewModel(
 						}
 					}.awaitAll().flatten()
 				} else {
-					val serverItems = when (contentType) {
-						"movies" -> fetchItemsFromServer(api, BaseItemKind.MOVIE, itemsToReplace)
-						"tv" -> fetchItemsFromServer(api, BaseItemKind.SERIES, itemsToReplace)
-						else -> {
-							val movies = async { fetchItemsFromServer(api, BaseItemKind.MOVIE, itemsToReplace / 2 + 1) }
-							val shows = async { fetchItemsFromServer(api, BaseItemKind.SERIES, itemsToReplace / 2 + 1) }
-							movies.await() + shows.await()
+					if (currentUserId == null) {
+						Timber.w("MediaBar refresh: No current user ID, cannot fetch items")
+						emptyList()
+					} else {
+						val serverItems = when (contentType) {
+							"movies" -> fetchItemsFromServer(api, currentUserId, BaseItemKind.MOVIE, itemsToReplace)
+							"tv" -> fetchItemsFromServer(api, currentUserId, BaseItemKind.SERIES, itemsToReplace)
+							else -> {
+								val movies = async { fetchItemsFromServer(api, currentUserId, BaseItemKind.MOVIE, itemsToReplace / 2 + 1) }
+								val shows = async { fetchItemsFromServer(api, currentUserId, BaseItemKind.SERIES, itemsToReplace / 2 + 1) }
+								movies.await() + shows.await()
+							}
 						}
+						serverItems.map { ItemWithApiClient(it, api) }
 					}
-					serverItems.map { ItemWithApiClient(it, api) }
 				}
 					.filter { it.item.backdropImageTags?.isNotEmpty() == true }
 					.shuffled()
