@@ -109,7 +109,7 @@ https://github.com/user-attachments/assets/0414ffca-60f4-470a-94b9-6b3405b3570c
 Download the latest APK from the [Releases page](https://github.com/Moonfin-Client/AndroidTV-FireTV/releases).
 
 **Supported Devices:**
-- Android TV devices (Android 5.0+)
+- Android TV devices (Android 6.0+)
 - Nvidia Shield TV
 - Amazon Fire TV / Fire TV Stick
 - Google TV (Chromecast with Google TV)
@@ -135,7 +135,7 @@ Your session is saved securely and will reconnect automatically.
 ### Prerequisites
 - Android Studio Arctic Fox or newer
 - JDK 11 or newer
-- Android SDK with API 21+ installed
+- Android SDK with API 23+ installed
 
 ### Steps
 
