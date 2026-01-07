@@ -236,6 +236,15 @@ public class PlaybackController implements PlaybackControllerNotifiable {
         return mCurrentStreamInfo == null || mCurrentStreamInfo.getPlayMethod() == PlayMethod.TRANSCODE;
     }
 
+    /**
+     * Check if subtitles are being burned/encoded into the video stream.
+     * When true, subtitle delay cannot be applied because the subtitles
+     * are part of the video frames, not separate text tracks.
+     */
+    public boolean isBurningSubtitles() {
+        return burningSubs;
+    }
+
     public boolean hasNextItem() {
         return mItems != null && mCurrentIndex < mItems.size() - 1;
     }

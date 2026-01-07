@@ -73,8 +73,10 @@ public class VideoManager {
     private PlaybackOverlayFragmentHelper _helper;
     public ExoPlayer mExoPlayer;
     private PlayerView mExoPlayerView;
+    private SubtitleView mCustomSubtitleView;
     private Handler mHandler = new Handler();
     private AudioDelayProcessor mAudioDelayProcessor;
+    private SubtitleDelayHandler mSubtitleDelayHandler;
 
     private long mMetaDuration = -1;
     private long lastExoPlayerPosition = -1;
@@ -107,6 +109,11 @@ public class VideoManager {
         }
 
         mExoPlayerView = view.findViewById(R.id.exoPlayerView);
+        
+        // Hide PlayerView's built-in subtitle view to prevent conflicts with our custom delay handling
+        SubtitleView playerViewSubtitles = mExoPlayerView.getSubtitleView();
+        playerViewSubtitles.setVisibility(View.GONE);
+        
         mExoPlayerView.setPlayer(mExoPlayer);
         int strokeColor = userPreferences.get(UserPreferences.Companion.getSubtitleTextStrokeColor()).intValue();
         int textWeight = userPreferences.get(UserPreferences.Companion.getSubtitlesTextWeight());
@@ -118,9 +125,24 @@ public class VideoManager {
                 strokeColor,
                 TypefaceCompat.create(activity, Typeface.DEFAULT, textWeight, false)
         );
-        mExoPlayerView.getSubtitleView().setFixedTextSize(TypedValue.COMPLEX_UNIT_DIP, userPreferences.get(UserPreferences.Companion.getSubtitlesTextSize()));
-        mExoPlayerView.getSubtitleView().setBottomPaddingFraction(userPreferences.get(UserPreferences.Companion.getSubtitlesOffsetPosition()));
-        mExoPlayerView.getSubtitleView().setStyle(subtitleStyle);
+        
+        // Create our own custom SubtitleView that we can control independently
+        mCustomSubtitleView = new SubtitleView(activity);
+        mCustomSubtitleView.setFixedTextSize(TypedValue.COMPLEX_UNIT_DIP, userPreferences.get(UserPreferences.Companion.getSubtitlesTextSize()));
+        mCustomSubtitleView.setBottomPaddingFraction(userPreferences.get(UserPreferences.Companion.getSubtitlesOffsetPosition()));
+        mCustomSubtitleView.setStyle(subtitleStyle);
+        
+        // Add custom subtitle view as overlay on top of PlayerView
+        FrameLayout.LayoutParams subtitleParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+        );
+        ((FrameLayout) mExoPlayerView.getParent()).addView(mCustomSubtitleView, subtitleParams);
+
+        // Initialize subtitle delay handler with our custom subtitle view
+        // The handler will intercept cues and manually control when they appear
+        mSubtitleDelayHandler = new SubtitleDelayHandler(mCustomSubtitleView);
+        mExoPlayer.addListener(mSubtitleDelayHandler);
 
         // Subtitle position and size patch for wide aspect ratio videos (PR #4816)
         mExoPlayer.addListener(new Player.Listener() {
@@ -134,7 +156,8 @@ public class VideoManager {
             public void onVideoSizeChanged(@NonNull VideoSize videoSize) {
                 if (videoSize.height == 0 || videoSize.width == 0)
                     return;
-                SubtitleView subtitleView = mExoPlayerView.getSubtitleView();
+                // Use our custom subtitle view instead of PlayerView's
+                SubtitleView subtitleView = mCustomSubtitleView;
                 int videoHeight = videoSize.height;
                 int videoWidth = videoSize.width;
                 float aspectRatio = (float) videoWidth / videoHeight;
@@ -611,14 +634,14 @@ public class VideoManager {
             Timber.w("Cannot set subtitle delay: player not initialized");
             return;
         }
+        
+        if (mSubtitleDelayHandler == null) {
+            Timber.w("Cannot set subtitle delay: subtitle delay handler not initialized");
+            return;
+        }
+        
         Timber.d("Setting subtitle delay: %d ms", delayMs);
-
-        // TODO: Implement ExoPlayer subtitle delay
-        // ExoPlayer doesn't have a built-in subtitle delay API in stable versions
-        // Possible approaches:
-        // 1. Use a custom TextRenderer with time offset
-        // 2. Modify subtitle timestamps during parsing
-        // 3. Use CuesWithTiming and offset presentation times
+        mSubtitleDelayHandler.setOffsetMs(delayMs);
     }
 
     public void setAudioDelay(long delayMs) {
@@ -660,6 +683,12 @@ public class VideoManager {
 
     private void releasePlayer() {
         if (mExoPlayer != null) {
+            if (mSubtitleDelayHandler != null) {
+                mExoPlayer.removeListener(mSubtitleDelayHandler);
+                mSubtitleDelayHandler.release();
+                mSubtitleDelayHandler = null;
+            }
+            
             mExoPlayerView.setPlayer(null);
             mExoPlayer.release();
             mExoPlayer = null;

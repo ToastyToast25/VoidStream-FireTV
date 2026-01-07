@@ -18,11 +18,6 @@ class SubtitleDelayAction(
 	
 	// Delay options in milliseconds
 	private val delayOptions = listOf(
-		-1000L to "-1.0s",
-		-750L to "-750ms",
-		-500L to "-500ms",
-		-250L to "-250ms",
-		-100L to "-100ms",
 		0L to "No Delay",
 		100L to "+100ms",
 		250L to "+250ms",
@@ -30,7 +25,9 @@ class SubtitleDelayAction(
 		750L to "+750ms",
 		1000L to "+1.0s",
 		1500L to "+1.5s",
-		2000L to "+2.0s"
+		2000L to "+2.0s",
+		2500L to "+2.5s",
+		3000L to "+3.0s"
 	)
 	
 	private var currentDelayMs: Long = 0L
@@ -92,10 +89,29 @@ class SubtitleDelayAction(
 	
 	private fun applySubtitleDelay(delayMs: Long) {
 		try {
-			val videoManager = playbackController.getVideoManager() ?: return
+			timber.log.Timber.d("SubtitleDelayAction: Applying delay %d ms", delayMs)
+			
+			// Check if subtitles are being burned into the video stream
+			if (playbackController.isBurningSubtitles) {
+				timber.log.Timber.w("SubtitleDelayAction: Subtitles are burned into video, delay not supported")
+				Toast.makeText(
+					context,
+					"Subtitle delay not available for burned-in subtitles",
+					Toast.LENGTH_LONG
+				).show()
+				return
+			}
+			
+			val videoManager = playbackController.getVideoManager()
+			if (videoManager == null) {
+				timber.log.Timber.w("SubtitleDelayAction: VideoManager is null!")
+				return
+			}
+			timber.log.Timber.d("SubtitleDelayAction: Got VideoManager, calling setSubtitleDelay")
 			videoManager.setSubtitleDelay(delayMs)
 			currentDelayMs = delayMs
 		} catch (e: Exception) {
+			timber.log.Timber.e(e, "SubtitleDelayAction: Failed to apply subtitle delay")
 			Toast.makeText(context, "Failed to apply subtitle delay", Toast.LENGTH_SHORT).show()
 		}
 	}
