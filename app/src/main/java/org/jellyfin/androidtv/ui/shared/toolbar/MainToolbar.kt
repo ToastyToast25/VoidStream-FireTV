@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,9 +44,10 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.Session
 import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
-import org.jellyfin.androidtv.constant.ShuffleContentType
+import org.jellyfin.androidtv.data.model.AggregatedLibrary
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.androidtv.ui.NowPlayingComposable
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
@@ -61,22 +61,19 @@ import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.navigation.ActivityDestinations
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
-import org.jellyfin.preference.store.PreferenceStore
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
+import org.jellyfin.androidtv.ui.shuffle.ShuffleOptionsDialog
+import org.jellyfin.androidtv.ui.shuffle.executeShuffle
 import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
 import org.jellyfin.sdk.api.client.ApiClient
-import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.model.api.BaseItemDto
-import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.CollectionType
-import org.jellyfin.sdk.model.api.ItemFilter
-import org.jellyfin.sdk.model.api.ItemSortBy
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinActivityViewModel
 import org.koin.core.qualifier.named
@@ -230,11 +227,14 @@ private fun MainToolbar(
 	val sessionRepository = koinInject<SessionRepository>()
 	val itemLauncher = koinInject<ItemLauncher>()
 	val api = koinInject<ApiClient>()
+	val apiClientFactory = koinInject<ApiClientFactory>()
 	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
 	val syncPlayViewModel = koinActivityViewModel<SyncPlayViewModel>()
 	val activity = LocalActivity.current
 	val context = LocalContext.current
 	val scope = rememberCoroutineScope()
+
+	var showShuffleDialog by remember { mutableStateOf(false) }
 
 	val activeButtonColors = ButtonDefaults.colors(
 		containerColor = JellyfinTheme.colorScheme.buttonActive,
@@ -375,39 +375,21 @@ private fun MainToolbar(
 					)
 				}
 
-			// Shuffle button (conditional)
-			if (showShuffleButton) {
+				if (showShuffleButton) {
 				IconButton(
+					onLongClick = { showShuffleDialog = true },
 					onClick = {
 						scope.launch {
-							try {
-								// Fetch random movie or TV show based on preference
-								// Note: We explicitly include only MOVIE and/or SERIES to exclude collections (BOX_SET)
-								val includeTypes = when (shuffleContentType) {
-									"movies" -> setOf(BaseItemKind.MOVIE)
-									"tv" -> setOf(BaseItemKind.SERIES)
-									else -> setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES)
-								}
-
-								val randomItem = withContext(Dispatchers.IO) {
-									val response = api.itemsApi.getItems(
-										includeItemTypes = includeTypes,
-										recursive = true,
-										sortBy = setOf(ItemSortBy.RANDOM),
-										filters = setOf(ItemFilter.IS_NOT_FOLDER),
-										limit = 1,
-									)
-									response.content.items?.firstOrNull()
-								}
-
-								if (randomItem != null) {
-									navigationRepository.navigate(Destinations.itemDetails(randomItem.id))
-								} else {
-									Timber.w("No random item found")
-								}
-							} catch (e: Exception) {
-								Timber.e(e, "Failed to fetch random item")
-							}
+							executeShuffle(
+								libraryId = null,
+								serverId = null,
+								genreName = null,
+								contentType = shuffleContentType,
+								libraryCollectionType = null,
+								api = api,
+								apiClientFactory = apiClientFactory,
+								navigationRepository = navigationRepository
+							)
 						}
 					},
 					colors = toolbarButtonColors,
@@ -547,6 +529,32 @@ private fun MainToolbar(
 			ToolbarClock()
 		}
 	)
+
+	if (showShuffleDialog) {
+		ShuffleOptionsDialog(
+			userViews = userViews,
+			aggregatedLibraries = aggregatedLibraries,
+			enableMultiServer = enableMultiServer,
+			shuffleContentType = shuffleContentType,
+			api = api,
+			onDismiss = { showShuffleDialog = false },
+			onShuffle = { libraryId, serverId, genreName, contentType, libraryCollectionType ->
+				showShuffleDialog = false
+				scope.launch {
+					executeShuffle(
+						libraryId = libraryId,
+						serverId = serverId,
+						genreName = genreName,
+						contentType = contentType,
+						libraryCollectionType = libraryCollectionType,
+						api = api,
+						apiClientFactory = apiClientFactory,
+						navigationRepository = navigationRepository
+					)
+				}
+			}
+		)
+	}
 }
 
 fun setupMainToolbarComposeView(

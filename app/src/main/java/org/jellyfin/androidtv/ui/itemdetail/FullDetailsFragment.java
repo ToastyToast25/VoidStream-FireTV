@@ -254,6 +254,23 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
             return null;
         });
 
+        boolean showShuffleButton = userPreferences.getValue().get(UserPreferences.Companion.getShowShuffleButton());
+        if (showShuffleButton) {
+            binding.fdClock.setShuffleVisible(true);
+            binding.fdClock.setOnShuffleClickListener(() -> {
+                org.jellyfin.androidtv.ui.shuffle.ShuffleUtilsKt.executeQuickShuffle(
+                    userPreferences.getValue(),
+                    navigationRepository.getValue()
+                );
+            });
+            binding.fdClock.setOnShuffleLongClickListener(() -> {
+                org.jellyfin.androidtv.ui.shuffle.ShuffleDialogLauncherKt.showShuffleDialog(
+                    requireContext(),
+                    navigationRepository.getValue()
+                );
+            });
+        }
+
         loadItem(mItemId);
 
         return binding.getRoot();

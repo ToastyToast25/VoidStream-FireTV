@@ -3,6 +3,7 @@ package org.jellyfin.androidtv.ui
 import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.RelativeLayout
 import androidx.core.view.isVisible
 import org.jellyfin.androidtv.databinding.ClockUserBugBinding
@@ -30,6 +31,10 @@ class ClockUserView @JvmOverloads constructor(
 		}
 
 	val homeButton get() = binding.home
+	val shuffleButton get() = binding.shuffle
+
+	private var onShuffleClickListener: Runnable? = null
+	private var onShuffleLongClickListener: Runnable? = null
 
 	init {
 		updateClockVisibility()
@@ -37,6 +42,27 @@ class ClockUserView @JvmOverloads constructor(
 		binding.home.setOnClickListener {
 			navigationRepository.reset(Destinations.home, clearHistory = true)
 		}
+
+		binding.shuffle.setOnClickListener {
+			onShuffleClickListener?.run()
+		}
+
+		binding.shuffle.setOnLongClickListener {
+			onShuffleLongClickListener?.run()
+			true
+		}
+	}
+
+	fun setShuffleVisible(visible: Boolean) {
+		binding.shuffle.visibility = if (visible) View.VISIBLE else View.GONE
+	}
+
+	fun setOnShuffleClickListener(listener: Runnable?) {
+		onShuffleClickListener = listener
+	}
+
+	fun setOnShuffleLongClickListener(listener: Runnable?) {
+		onShuffleLongClickListener = listener
 	}
 
 	private fun updateClockVisibility() {
@@ -50,5 +76,8 @@ class ClockUserView @JvmOverloads constructor(
 		}
 
 		binding.home.isVisible = !isVideoPlayer
+		if (isVideoPlayer) {
+			binding.shuffle.isVisible = false
+		}
 	}
 }
