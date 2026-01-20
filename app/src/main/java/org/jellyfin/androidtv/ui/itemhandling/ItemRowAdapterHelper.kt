@@ -31,6 +31,7 @@ import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.api.client.extensions.userViewsApi
 import org.jellyfin.sdk.api.client.extensions.videosApi
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemFilter
 import org.jellyfin.sdk.model.api.ItemSortBy
 import org.jellyfin.sdk.model.api.SeriesTimerInfoDto
@@ -680,9 +681,19 @@ fun ItemRowAdapter.retrieveItems(
 				).content
 			}
 
+			val filteredItems = if (query.excludeItemTypes?.contains(BaseItemKind.BOX_SET) == true) {
+				response.items.filter { it.type != BaseItemKind.BOX_SET }.also { filtered ->
+					if (filtered.size != response.items.size) {
+						Timber.d("ItemRowAdapter: Filtered out ${response.items.size - filtered.size} BoxSet items (${response.items.size} -> ${filtered.size})")
+					}
+				}
+			} else {
+				response.items
+			}
+
 			totalItems = response.totalRecordCount
 			setItems(
-				items = response.items,
+				items = filteredItems,
 				transform = { item, _ ->
 					BaseItemDtoBaseRowItem(
 						item,
