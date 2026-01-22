@@ -66,6 +66,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		 */
 		var showLibrariesInToolbar = booleanPreference("pref_show_libraries_in_toolbar", true)
 
+		/**
+		 * Navbar position (top or left)
+		 */
+		var navbarPosition = enumPreference("pref_navbar_position", org.jellyfin.androidtv.preference.constant.NavbarPosition.TOP)
+
 		var syncPlayEnabled = booleanPreference("pref_syncplay_enabled", true)
 
 		/**

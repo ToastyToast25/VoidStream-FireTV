@@ -870,6 +870,10 @@
     
     <!-- Toolbar Customization -->
     <string name="pref_toolbar_customization">Toolbar Customization</string>
+    <string name="pref_navbar_position">Navigation Bar Position</string>
+    <string name="pref_navbar_position_description">Choose where the navigation bar appears</string>
+    <string name="pref_navbar_position_top">Top</string>
+    <string name="pref_navbar_position_left">Left Sidebar</string>
     <string name="home_section_settings">Home Screen</string>
     <string name="pref_confirm_exit">Confirm Exit</string>
     <string name="pref_confirm_exit_description">Show confirmation dialog when exiting the app</string>
