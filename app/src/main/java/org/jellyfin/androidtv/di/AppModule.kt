@@ -157,8 +157,8 @@ val appModule = module {
 	// Non API related
 	single { DataRefreshService() }
 	single { PlaybackControllerContainer() }
-	// Scoped as a ViewModel so viewModelScope works properly, but use inject<>() to ensure singleton behavior
-	viewModel { InteractionTrackerViewModel(get(), get()) }
+	// Use single scope to ensure the same instance is used across all playback sessions
+	single { InteractionTrackerViewModel(get(), get()) }
 
 	single<UserRepository> { UserRepositoryImpl() }
 	single<UserViewsRepository> { UserViewsRepositoryImpl(get(), get()) }
