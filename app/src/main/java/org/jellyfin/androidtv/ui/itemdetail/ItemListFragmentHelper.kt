@@ -113,3 +113,27 @@ fun ItemListFragment.removeFromPlaylist(
 		}
 	}
 }
+
+fun ItemListFragment.movePlaylistItem(
+	playlistId: UUID,
+	playlistItemId: String,
+	newIndex: Int,
+	callback: () -> Unit
+) {
+	val api by inject<ApiClient>()
+
+	lifecycleScope.launch {
+		try {
+			withContext(Dispatchers.IO) {
+				api.playlistsApi.moveItem(
+					playlistId = playlistId.toString(),
+					itemId = playlistItemId,
+					newIndex = newIndex
+				)
+			}
+			callback()
+		} catch (e: Exception) {
+			timber.log.Timber.e(e, "Failed to move playlist item")
+		}
+	}
+}

@@ -20,6 +20,7 @@ public class ItemListView extends FrameLayout {
     List<UUID> mItemIds = new ArrayList<>();
     ItemRowView.RowSelectedListener mRowSelectedListener;
     ItemRowView.RowClickedListener mRowClickedListener;
+    boolean mReorderingEnabled = false;
 
     public ItemListView(Context context) {
         super(context);
@@ -47,8 +48,66 @@ public class ItemListView extends FrameLayout {
     }
 
     public void addItem(BaseItemDto item, int ndx) {
-        mList.addView(new ItemRowView(mContext, item, ndx, mRowSelectedListener, mRowClickedListener));
+        ItemRowView row = new ItemRowView(mContext, item, ndx, mRowSelectedListener, mRowClickedListener);
+        row.setReorderingEnabled(mReorderingEnabled);
+        mList.addView(row);
         mItemIds.add(item.getId());
+        updateTotalCount();
+    }
+
+    public void setReorderingEnabled(boolean enabled) {
+        mReorderingEnabled = enabled;
+        for (int i = 0; i < mList.getChildCount(); i++) {
+            View child = mList.getChildAt(i);
+            if (child instanceof ItemRowView) {
+                ((ItemRowView) child).setReorderingEnabled(enabled);
+            }
+        }
+        updateTotalCount();
+    }
+
+    private void updateTotalCount() {
+        int count = mList.getChildCount();
+        for (int i = 0; i < count; i++) {
+            View child = mList.getChildAt(i);
+            if (child instanceof ItemRowView) {
+                ((ItemRowView) child).setTotalCount(count);
+            }
+        }
+    }
+
+    public void moveItem(int fromIndex, int toIndex) {
+        if (fromIndex < 0 || fromIndex >= mList.getChildCount() ||
+            toIndex < 0 || toIndex >= mList.getChildCount()) {
+            return;
+        }
+        
+        View viewToMove = mList.getChildAt(fromIndex);
+        mList.removeViewAt(fromIndex);
+        mList.addView(viewToMove, toIndex);
+        
+        UUID itemId = mItemIds.remove(fromIndex);
+        mItemIds.add(toIndex, itemId);
+        
+        int minIndex = Math.min(fromIndex, toIndex);
+        int maxIndex = Math.max(fromIndex, toIndex);
+        for (int i = minIndex; i <= maxIndex; i++) {
+            View child = mList.getChildAt(i);
+            if (child instanceof ItemRowView) {
+                ((ItemRowView) child).updateIndex(i);
+            }
+        }
+        
+        updateTotalCount();
+    }
+
+    public void focusItemAt(int index) {
+        if (index >= 0 && index < mList.getChildCount()) {
+            View child = mList.getChildAt(index);
+            if (child != null) {
+                child.requestFocus();
+            }
+        }
     }
 
     public ItemRowView updatePlaying(UUID id) {

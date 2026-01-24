@@ -154,6 +154,26 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
     public boolean onKey(View v, int keyCode, KeyEvent event) {
         if (event.getAction() != KeyEvent.ACTION_UP) return false;
 
+        // Handle playlist item reordering with DPAD_LEFT/RIGHT
+        if (mCurrentRow != null && mBaseItem != null && mBaseItem.getType() == BaseItemKind.PLAYLIST
+                && mBaseItem.getCanDelete() != null && mBaseItem.getCanDelete()) {
+            int currentIndex = mCurrentRow.getIndex();
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_DPAD_LEFT:
+                    if (currentIndex > 0) {
+                        movePlaylistItem(currentIndex, currentIndex - 1);
+                        return true;
+                    }
+                    break;
+                case KeyEvent.KEYCODE_DPAD_RIGHT:
+                    if (currentIndex < mItems.size() - 1) {
+                        movePlaylistItem(currentIndex, currentIndex + 1);
+                        return true;
+                    }
+                    break;
+            }
+        }
+
         if (mediaManager.getValue().isPlayingAudio()) {
             switch (keyCode) {
                 case KeyEvent.KEYCODE_MEDIA_PAUSE:
@@ -183,6 +203,24 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
         }
 
         return false;
+    }
+
+    private void movePlaylistItem(int fromIndex, int toIndex) {
+        if (mBaseItem == null || mItems.isEmpty()) return;
+        
+        BaseItemDto item = mItems.get(fromIndex);
+        String playlistItemId = item.getPlaylistItemId();
+        if (playlistItemId == null) return;
+        
+        ItemListFragmentHelperKt.movePlaylistItem(this, mBaseItem.getId(), playlistItemId, toIndex, () -> {
+            mItems.remove(fromIndex);
+            mItems.add(toIndex, item);
+            
+            mItemList.moveItem(fromIndex, toIndex);
+            
+            mItemList.focusItemAt(toIndex);
+            return null;
+        });
     }
 
     @Override
@@ -354,6 +392,10 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
             mTitle.setTextSize(32);
         }
         if (!items.isEmpty()) {
+            boolean canReorder = mBaseItem.getType() == BaseItemKind.PLAYLIST
+                    && mBaseItem.getCanDelete() != null && mBaseItem.getCanDelete();
+            mItemList.setReorderingEnabled(canReorder);
+
             mItems = new ArrayList<>();
             int i = 0;
             for (BaseItemDto item : items) {
