@@ -111,7 +111,7 @@ fun MediaBarSlideshowView(
 	Box(
 		modifier = modifier
 			.fillMaxWidth()
-			.height(235.dp) // Increased 8% from 217dp
+			.height(235.dp)
 			.onFocusChanged { focusState ->
 				viewModel.setFocused(focusState.hasFocus)
 			}

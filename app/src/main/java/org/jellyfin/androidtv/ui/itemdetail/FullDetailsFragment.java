@@ -1088,8 +1088,15 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         mResumeButton.setVisibility(resumeButtonVisible ? View.VISIBLE : View.GONE);
 
         if (resumeButtonVisible) {
+            playButton.setLabel(getString(R.string.lbl_from_beginning));
+            playButton.setIcon(R.drawable.ic_loop, BUTTON_SIZE);
             mResumeButton.requestFocus();
         } else {
+            String playLabel = BaseItemExtensionsKt.isLiveTv(mBaseItem) ? getString(R.string.lbl_tune_to_channel) 
+                : Utils.getSafeValue(mBaseItem.isFolder(), false) ? getString(R.string.lbl_play_all) 
+                : getString(R.string.lbl_play);
+            playButton.setLabel(playLabel);
+            playButton.setIcon(R.drawable.ic_play, BUTTON_SIZE);
             playButton.requestFocus();
         }
     }
@@ -1128,12 +1135,11 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
         int visibleOptions = mDetailsOverviewRow.getVisibleActions();
 
         List<TextUnderButton> actionsList = new ArrayList<>();
-        // added in order of priority (should match res/menu/menu_details_more.xml)
+        // added in order of priority (least important last)
         if (queueButton != null) actionsList.add(queueButton);
-        if (trailerButton != null) actionsList.add(trailerButton);
         if (shuffleButton != null) actionsList.add(shuffleButton);
-        if (favButton != null) actionsList.add(favButton);
-        if (goToSeriesButton != null) actionsList.add(goToSeriesButton);
+        if (mPrevButton != null) actionsList.add(mPrevButton);
+        if (deleteButton != null) actionsList.add(deleteButton);
 
         // reverse the list so the less important actions are hidden first
         Collections.reverse(actionsList);
