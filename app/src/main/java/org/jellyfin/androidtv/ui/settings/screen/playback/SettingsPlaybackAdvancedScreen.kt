@@ -106,6 +106,42 @@ fun SettingsPlaybackAdvancedScreen() {
 			}
 		}
 
+		item {
+			var unpauseRewindDuration by rememberPreference(userSettingPreferences, UserSettingPreferences.unpauseRewindDuration)
+			val interactionSource = remember { MutableInteractionSource() }
+
+			ListControl(
+				headingContent = { Text(stringResource(R.string.unpause_rewind_duration)) },
+				interactionSource = interactionSource,
+			) {
+				Row(
+					verticalAlignment = Alignment.CenterVertically,
+				) {
+					RangeControl(
+						modifier = Modifier
+							.height(4.dp)
+							.weight(1f),
+						interactionSource = interactionSource,
+						// 0 - 10 seconds with 1 second increment
+						min = 0f,
+						max = 10_000f,
+						stepForward = 1_000f,
+						value = unpauseRewindDuration.toFloat(),
+						onValueChange = { unpauseRewindDuration = it.roundToInt() }
+					)
+
+					Spacer(Modifier.width(Tokens.Space.spaceSm))
+
+					Box(
+						modifier = Modifier.sizeIn(minWidth = 32.dp),
+						contentAlignment = Alignment.CenterEnd
+					) {
+						Text("${unpauseRewindDuration / 1000}s")
+					}
+				}
+			}
+		}
+
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_video)) }) }
 
 		item {

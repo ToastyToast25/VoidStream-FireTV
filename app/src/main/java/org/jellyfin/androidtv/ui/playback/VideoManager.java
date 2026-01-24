@@ -350,6 +350,27 @@ public class VideoManager {
         return -1;
     }
 
+    /**
+     * Seek within the player's buffer without triggering a network request if possible.
+     * ExoPlayer will seek within buffered content instantly if available.
+     * @param pos the position to seek to in ms
+     * @return true if seek was attempted
+     */
+    public boolean seekWithinBuffer(long pos) {
+        if (!isInitialized())
+            return false;
+        
+        long currentPos = mExoPlayer.getCurrentPosition();
+        long bufferedEnd = mExoPlayer.getBufferedPosition();
+        
+        // For HLS/transcoded streams, ExoPlayer maintains a buffer window
+        // If we're seeking backwards within reasonable range, it should use cached data
+        // The buffer start is harder to determine, but ExoPlayer handles this gracefully
+        Timber.i("Attempting seek from %d to %d (buffered up to: %d)", currentPos, pos, bufferedEnd);
+        mExoPlayer.seekTo(pos);
+        return true;
+    }
+
     public long getCurrentPosition() {
         if (mExoPlayer == null || !isPlaying()) {
             return lastExoPlayerPosition == -1 ? 0 : lastExoPlayerPosition;

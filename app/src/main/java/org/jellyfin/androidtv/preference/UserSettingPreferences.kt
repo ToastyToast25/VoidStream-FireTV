@@ -33,6 +33,12 @@ class UserSettingPreferences(
 	companion object {
 		val skipBackLength = intPreference("skipBackLength", 10_000)
 		val skipForwardLength = intPreference("skipForwardLength", 30_000)
+
+		/**
+		 * Duration in milliseconds to rewind when resuming from pause.
+		 * Allows users to rewatch a few seconds they may have missed while paused.
+		 */
+		val unpauseRewindDuration = intPreference("unpauseRewindDuration", 0)
 		
 		// Media Bar settings
 		val mediaBarEnabled = booleanPreference("mediaBarEnabled", true)

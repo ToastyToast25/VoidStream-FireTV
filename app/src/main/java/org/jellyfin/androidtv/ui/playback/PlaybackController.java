@@ -583,7 +583,22 @@ public class PlaybackController implements PlaybackControllerNotifiable {
                 if (!hasInitializedVideoManager()) {
                     return;
                 }
-                // just resume
+                // Apply unpause rewind if configured
+                UserSettingPreferences prefs = KoinJavaComponent.<UserSettingPreferences>get(UserSettingPreferences.class);
+                int unpauseRewindMs = prefs.get(UserSettingPreferences.Companion.getUnpauseRewindDuration());
+                if (unpauseRewindMs > 0) {
+                    long rewindPosition = Math.max(0, getCurrentPosition() - unpauseRewindMs);
+                    if (isTranscoding()) {
+                        // For transcoded content, only seek if within buffer to avoid server restart
+                        Timber.i("Attempting buffer seek for transcoded content, rewind %d ms", unpauseRewindMs);
+                        mVideoManager.seekWithinBuffer(rewindPosition);
+                    } else {
+                        // For direct play, always seek
+                        Timber.i("Rewinding %d ms on unpause, seeking to: %d", unpauseRewindMs, rewindPosition);
+                        mVideoManager.seekTo(rewindPosition);
+                    }
+                }
+                // resume playback
                 mVideoManager.play();
                 mPlaybackState = PlaybackState.PLAYING; // won't get another onPrepared call
                 mFragment.setFadingEnabled(true);

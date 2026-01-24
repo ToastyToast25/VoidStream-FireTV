@@ -7,4 +7,5 @@ class PlaybackManagerOptions(
 
 	val defaultRewindAmount: () -> Duration,
 	val defaultFastForwardAmount: () -> Duration,
+	val unpauseRewindAmount: () -> Duration = { Duration.ZERO },
 )

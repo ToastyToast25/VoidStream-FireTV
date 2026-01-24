@@ -115,6 +115,12 @@ class MutablePlayerState(
 	}
 
 	override fun unpause() {
+		val rewindAmount = options.unpauseRewindAmount()
+		if (rewindAmount > Duration.ZERO) {
+			val current = backendService.backend?.getPositionInfo()?.active ?: Duration.ZERO
+			val newPosition = maxOf(Duration.ZERO, current - rewindAmount)
+			backendService.backend?.seekTo(newPosition)
+		}
 		backendService.backend?.play()
 	}
 
