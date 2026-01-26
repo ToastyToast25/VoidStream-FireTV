@@ -17,6 +17,7 @@ import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ItemSortBy
+import org.jellyfin.sdk.model.api.MediaType
 import org.jellyfin.sdk.model.api.SortOrder
 import java.util.UUID
 import kotlin.time.Duration.Companion.seconds
@@ -28,6 +29,12 @@ class PhotoPlayerViewModel(private val api: ApiClient) : ViewModel() {
 	private val _currentItem = MutableStateFlow<BaseItemDto?>(null)
 	val currentItem = _currentItem.asStateFlow()
 
+	/**
+	 * Used to determine whether to show photo content or video player.
+	 */
+	val isCurrentItemVideo: Boolean
+		get() = _currentItem.value?.mediaType == MediaType.VIDEO
+
 	suspend fun loadItem(id: UUID, sortBy: Collection<ItemSortBy>, sortOrder: SortOrder) {
 		// Load requested item
 		val itemResponse = api.ioCallContent {
@@ -35,10 +42,12 @@ class PhotoPlayerViewModel(private val api: ApiClient) : ViewModel() {
 		}
 		_currentItem.value = itemResponse
 
+		// Load all media items (photos AND videos) from the same folder
+		// This enables slideshow-style playback through mixed media
 		val albumResponse = api.ioCallContent {
 			itemsApi.getItems(
 				parentId = itemResponse.parentId,
-				includeItemTypes = setOf(BaseItemKind.PHOTO),
+				includeItemTypes = setOf(BaseItemKind.PHOTO, BaseItemKind.VIDEO),
 				fields = ItemRepository.itemFields,
 				sortBy = sortBy,
 				sortOrder = listOf(sortOrder),
@@ -84,10 +93,41 @@ class PhotoPlayerViewModel(private val api: ApiClient) : ViewModel() {
 	val presentationActive = _presentationActive.asStateFlow()
 	var presentationDelay = 8.seconds
 
+	private var wasPlayingBeforeVideo = false
+
 	fun createPresentationJob() = viewModelScope.launch(Dispatchers.IO) {
 		while (isActive) {
 			delay(presentationDelay)
-			showNext()
+			if (_currentItem.value?.mediaType != MediaType.VIDEO) {
+				showNext()
+			}
+		}
+	}
+
+	/**
+	 * Pause the slideshow timer while a video is playing.
+	 * The video completion callback will resume/advance.
+	 */
+	fun pausePresentationForVideo() {
+		wasPlayingBeforeVideo = presentationActive.value
+		presentationJob?.cancel()
+		presentationJob = null
+	}
+
+	/**
+	 * Called when a video finishes playing.
+	 * Advances to the next item and resumes slideshow if it was active.
+	 */
+	fun onVideoCompleted() {
+		if (album.isEmpty()) return
+
+		albumIndex++
+		if (albumIndex == album.size) albumIndex = 0
+
+		_currentItem.value = album[albumIndex]
+
+		if (wasPlayingBeforeVideo) {
+			presentationJob = createPresentationJob()
 		}
 	}
 

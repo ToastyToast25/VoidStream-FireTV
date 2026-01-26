@@ -170,6 +170,33 @@ public class ItemLauncher {
                         }
                         return;
 
+                    case VIDEO:
+                        // Check if this video is in a photos/home videos context (same folder as photos)
+                        if (adapter instanceof ItemRowAdapter) {
+                            ItemRowAdapter itemRowAdapter = (ItemRowAdapter) adapter;
+                            boolean hasPhotosInAdapter = false;
+                            for (int i = 0; i < adapter.size(); i++) {
+                                Object obj = adapter.get(i);
+                                if (obj instanceof BaseRowItem) {
+                                    BaseItemDto item = ((BaseRowItem) obj).getBaseItem();
+                                    if (item != null && item.getType() == BaseItemKind.PHOTO) {
+                                        hasPhotosInAdapter = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (hasPhotosInAdapter) {
+                                navigationRepository.getValue().navigate(Destinations.INSTANCE.photoPlayer(
+                                        baseItem.getId(),
+                                        false,
+                                        itemRowAdapter.getSortBy(),
+                                        itemRowAdapter.getSortOrder()
+                                ));
+                                return;
+                            }
+                        }
+                        break;
+
                 }
 
                 // or generic handling
