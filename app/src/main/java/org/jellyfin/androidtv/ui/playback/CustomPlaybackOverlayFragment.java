@@ -51,6 +51,7 @@ import org.jellyfin.androidtv.ui.ObservableHorizontalScrollView;
 import org.jellyfin.androidtv.ui.ObservableScrollView;
 import org.jellyfin.androidtv.ui.ProgramGridCell;
 import org.jellyfin.androidtv.ui.ScrollViewListener;
+import org.jellyfin.androidtv.ui.itemhandling.BaseItemPersonBaseRowItem;
 import org.jellyfin.androidtv.ui.itemhandling.ChapterItemInfoBaseRowItem;
 import org.jellyfin.androidtv.ui.itemhandling.ItemRowAdapter;
 import org.jellyfin.androidtv.ui.livetv.LiveTvGuide;
@@ -383,6 +384,13 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
             } else if (item instanceof BaseItemDto) {
                 hidePopupPanel();
                 switchChannel(((BaseItemDto) item).getId());
+            } else if (item instanceof BaseItemPersonBaseRowItem) {
+                BaseItemPersonBaseRowItem rowItem = (BaseItemPersonBaseRowItem) item;
+                hidePopupPanel();
+                closePlayer();
+                if (rowItem.getItemId() != null) {
+                    navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(rowItem.getItemId(), null));
+                }
             }
         }
     };
@@ -1197,6 +1205,15 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
         }, 500);
     }
 
+    public void showCastSelector() {
+        prepareCastAdapter();
+        showChapterPanel();
+        mHandler.postDelayed(() -> {
+            if (!getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED)) return;
+            mPopupPanelVisible = true;
+        }, 500);
+    }
+
     private int getCurrentChapterIndex(BaseItemDto item, long pos) {
         int ndx = 0;
         Timber.d("*** looking for chapter at pos: %d", pos);
@@ -1358,6 +1375,23 @@ public class CustomPlaybackOverlayFragment extends Fragment implements LiveTvGui
             if (mChapterRow != null) mPopupRowAdapter.remove(mChapterRow);
             mChapterRow = new ListRow(new HeaderItem(requireContext().getString(R.string.channels)), channelAdapter);
             mPopupRowAdapter.add(mChapterRow);
+            return null;
+        });
+    }
+
+    private void prepareCastAdapter() {
+        BaseItemDto item = playbackControllerContainer.getValue().getPlaybackController().getCurrentlyPlayingItem();
+        
+        CustomPlaybackOverlayFragmentHelperKt.loadCastForItem(this, item, people -> {
+            if (people != null && !people.isEmpty()) {
+                ArrayObjectAdapter castAdapter = new ArrayObjectAdapter(new CardPresenter(true, 120));
+                for (org.jellyfin.sdk.model.api.BaseItemPerson person : people) {
+                    castAdapter.add(new BaseItemPersonBaseRowItem(person));
+                }
+                if (mChapterRow != null) mPopupRowAdapter.remove(mChapterRow);
+                mChapterRow = new ListRow(new HeaderItem(requireContext().getString(R.string.lbl_cast)), castAdapter);
+                mPopupRowAdapter.add(mChapterRow);
+            }
             return null;
         });
     }

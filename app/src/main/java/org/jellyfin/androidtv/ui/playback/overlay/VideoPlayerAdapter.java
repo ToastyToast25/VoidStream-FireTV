@@ -177,4 +177,20 @@ public class VideoPlayerAdapter extends PlayerAdapter {
         List<ChapterInfo> chapters = item.getChapters();
         return chapters != null && chapters.size() > 0;
     }
+
+    boolean hasCast() {
+        org.jellyfin.sdk.model.api.BaseItemDto item = getCurrentlyPlayingItem();
+        if (item == null) return false;
+        
+        java.util.List<org.jellyfin.sdk.model.api.BaseItemPerson> people = item.getPeople();
+        if (people != null && !people.isEmpty()) {
+            return true;
+        }
+        
+        if (item.getType() == org.jellyfin.sdk.model.api.BaseItemKind.EPISODE && item.getSeriesId() != null) {
+            return true;
+        }
+        
+        return false;
+    }
 }

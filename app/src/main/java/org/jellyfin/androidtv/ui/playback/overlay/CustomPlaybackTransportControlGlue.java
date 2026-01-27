@@ -28,6 +28,7 @@ import org.jellyfin.androidtv.preference.constant.ClockBehavior;
 import org.jellyfin.androidtv.ui.playback.PlaybackController;
 import org.jellyfin.androidtv.ui.playback.overlay.action.AndroidAction;
 import org.jellyfin.androidtv.ui.playback.overlay.action.AudioDelayAction;
+import org.jellyfin.androidtv.ui.playback.overlay.action.CastAction;
 import org.jellyfin.androidtv.ui.playback.overlay.action.ChannelBarChannelAction;
 import org.jellyfin.androidtv.ui.playback.overlay.action.ChapterAction;
 import org.jellyfin.androidtv.ui.playback.overlay.action.ClosedCaptionsAction;
@@ -65,6 +66,7 @@ public class CustomPlaybackTransportControlGlue extends PlaybackTransportControl
     private PlaybackSpeedAction playbackSpeedAction;
     private ZoomAction zoomAction;
     private ChapterAction chapterAction;
+    private CastAction castAction;
     private SubtitleDelayAction subtitleDelayAction;
     private AudioDelayAction audioDelayAction;
 
@@ -209,6 +211,8 @@ public class CustomPlaybackTransportControlGlue extends PlaybackTransportControl
         zoomAction.setLabels(new String[]{context.getString(R.string.lbl_zoom)});
         chapterAction = new ChapterAction(context, this);
         chapterAction.setLabels(new String[]{context.getString(R.string.lbl_chapters)});
+        castAction = new CastAction(context, this);
+        castAction.setLabels(new String[]{context.getString(R.string.lbl_cast)});
         subtitleDelayAction = new SubtitleDelayAction(context, this, playbackController);
         subtitleDelayAction.setLabels(new String[]{context.getString(R.string.lbl_subtitle_delay)});
         audioDelayAction = new AudioDelayAction(context, this, playbackController);
@@ -284,6 +288,10 @@ public class CustomPlaybackTransportControlGlue extends PlaybackTransportControl
 
         if (playerAdapter.hasChapters()) {
             secondaryActionsAdapter.add(chapterAction);
+        }
+
+        if (playerAdapter.hasCast()) {
+            secondaryActionsAdapter.add(castAction);
         }
 
         if (!playerAdapter.isLiveTv()) {

@@ -223,5 +223,36 @@ fun CustomPlaybackOverlayFragment.askToSkip(position: Duration, segmentType: Med
 	}
 }
 
+fun CustomPlaybackOverlayFragment.loadCastForItem(
+	item: BaseItemDto,
+	onComplete: (List<org.jellyfin.sdk.model.api.BaseItemPerson>) -> Unit
+) {
+	val api by inject<ApiClient>()
 
+	val itemPeople = item.people
+	if (!itemPeople.isNullOrEmpty()) {
+		onComplete(itemPeople)
+		return
+	}
 
+	if (item.type == org.jellyfin.sdk.model.api.BaseItemKind.EPISODE && item.seriesId != null) {
+		lifecycleScope.launch {
+			runCatching {
+				withContext(Dispatchers.IO) {
+					api.userLibraryApi.getItem(item.seriesId!!).content
+				}
+			}.fold(
+				onSuccess = { series ->
+					val seriesPeople = series.people ?: emptyList()
+					onComplete(seriesPeople)
+				},
+				onFailure = { error ->
+					Timber.e(error, "Failed to load series cast")
+					onComplete(emptyList())
+				}
+			)
+		}
+	} else {
+		onComplete(emptyList())
+	}
+}
