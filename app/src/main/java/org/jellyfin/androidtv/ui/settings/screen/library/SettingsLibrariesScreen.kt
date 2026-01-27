@@ -3,6 +3,7 @@ package org.jellyfin.androidtv.ui.settings.screen.library
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -10,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import org.jellyfin.androidtv.R
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.ui.base.Icon
@@ -37,8 +39,10 @@ fun SettingsLibrariesScreen() {
 	val router = LocalRouter.current
 	val userViewsRepository = koinInject<UserViewsRepository>()
 	val multiServerRepository = koinInject<MultiServerRepository>()
+	val sessionRepository = koinInject<SessionRepository>()
 	
 	var libraries by remember { mutableStateOf<List<LibraryDisplayItem>>(emptyList()) }
+	val currentSession by sessionRepository.currentSession.collectAsState()
 	
 	LaunchedEffect(Unit) {
 		val loggedInServers = multiServerRepository.getLoggedInServers()
@@ -84,18 +88,25 @@ fun SettingsLibrariesScreen() {
 					onClick = { router.push(Routes.LIVETV_GUIDE_OPTIONS) }
 				)
 			} else {
-				val canOpen = allowGridView && displayPreferencesId != null
+				val canOpen = allowGridView && displayPreferencesId != null && currentSession != null
 
 				ListButton(
 					leadingContent = { Icon(painterResource(R.drawable.ic_folder), contentDescription = null) },
 					headingContent = { Text(item.displayName) },
 					enabled = canOpen,
 					onClick = {
-						if (canOpen) {
-							router.push(
-								Routes.LIBRARIES_DISPLAY,
-								mapOf("itemId" to item.library.id.toString(), "displayPreferencesId" to item.library.displayPreferencesId!!)
-							)
+						currentSession?.let { session ->
+							if (canOpen) {
+								router.push(
+									Routes.LIBRARIES_DISPLAY,
+									mapOf(
+										"itemId" to item.library.id.toString(), 
+										"displayPreferencesId" to item.library.displayPreferencesId!!,
+										"serverId" to session.serverId.toString(),
+										"userId" to session.userId.toString()
+									)
+								)
+							}
 						}
 					}
 				)
