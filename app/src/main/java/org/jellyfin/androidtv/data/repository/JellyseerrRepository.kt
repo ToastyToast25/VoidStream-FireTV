@@ -296,6 +296,11 @@ interface JellyseerrRepository {
 	suspend fun getSonarrSettings(): Result<List<JellyseerrSonarrSettingsDto>>
 
 	/**
+	 * Log out from Jellyseerr - clears all auth data, cookies, and preferences
+	 */
+	suspend fun logout()
+
+	/**
 	 * Cleanup resources
 	 */
 	fun close()
@@ -614,6 +619,14 @@ class JellyseerrRepositoryImpl(
 				initialize(jellyseerrUrl, "")
 				userPrefs[JellyseerrPreferences.authMethod] = "jellyfin"
 			}
+		}.onFailure { error ->
+			Timber.e(error, "Jellyseerr: Jellyfin login failed, clearing cookies and invalidating session cache")
+			// Clear cookies to prevent stale auth data from causing issues on retry
+			JellyseerrHttpClient.clearCookies()
+			// Invalidate session cache so next check will verify fresh
+			invalidateSessionCache()
+			// Mark as unavailable
+			_isAvailable.emit(false)
 		}
 		
 		result
@@ -657,7 +670,13 @@ class JellyseerrRepositoryImpl(
 				userPrefs[JellyseerrPreferences.apiKey] = apiKey
 			}
 		}.onFailure { error ->
-			Timber.e(error, "Jellyseerr: Failed to login with local account")
+			Timber.e(error, "Jellyseerr: Local login failed, clearing cookies and invalidating session cache")
+			// Clear cookies to prevent stale auth data from causing issues on retry
+			JellyseerrHttpClient.clearCookies()
+			// Invalidate session cache so next check will verify fresh
+			invalidateSessionCache()
+			// Mark as unavailable
+			_isAvailable.emit(false)
 		}
 		
 		result
@@ -1076,6 +1095,41 @@ class JellyseerrRepositoryImpl(
 		}
 
 		client.getSonarrSettings()
+	}
+
+	override suspend fun logout() = withContext(Dispatchers.IO) {
+		Timber.i("Jellyseerr: Logging out - clearing all auth data")
+		
+		// Clear cookies
+		JellyseerrHttpClient.clearCookies()
+		
+		// Clear user-specific preferences (auth data, API keys, etc.)
+		val userPrefs = getUserPreferences()
+		if (userPrefs != null) {
+			userPrefs[JellyseerrPreferences.apiKey] = ""
+			userPrefs[JellyseerrPreferences.password] = ""
+			userPrefs[JellyseerrPreferences.authMethod] = ""
+			userPrefs[JellyseerrPreferences.localEmail] = ""
+			userPrefs[JellyseerrPreferences.localPassword] = ""
+		}
+		
+		// Reset global connection status
+		preferences[JellyseerrPreferences.lastConnectionSuccess] = false
+		preferences[JellyseerrPreferences.lastJellyfinUser] = ""
+		
+		// Invalidate session cache
+		invalidateSessionCache()
+		
+		// Close and reset HTTP client
+		httpClient?.close()
+		httpClient = null
+		initialized = false
+		lastUserId = null
+		
+		// Mark as unavailable
+		_isAvailable.emit(false)
+		
+		Timber.i("Jellyseerr: Logout complete")
 	}
 
 	override fun close() {

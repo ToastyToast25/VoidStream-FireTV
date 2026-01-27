@@ -836,8 +836,14 @@
     <string name="jellyseerr_api_key_status">API Key Status</string>
     <string name="jellyseerr_api_key_present">Permanent API key active</string>
     <string name="jellyseerr_api_key_absent">Using cookie-based auth (expires in ~30 days)</string>
+    <string name="jellyseerr_not_logged_in">Not logged in</string>
     <string name="jellyseerr_login_local">Login with Local Account</string>
     <string name="jellyseerr_login_local_description">Authenticate using email and password to get permanent API key</string>
+    <string name="jellyseerr_logout">Log Out</string>
+    <string name="jellyseerr_logout_description">Clear all Jellyseerr authentication data and cookies</string>
+    <string name="jellyseerr_logout_success">Logged out of Jellyseerr successfully</string>
+    <string name="jellyseerr_logout_confirm_title">Log Out of Jellyseerr?</string>
+    <string name="jellyseerr_logout_confirm_message">This will clear all authentication data and cookies. You will need to log in again to use Jellyseerr.</string>
     
     <!-- Jellyseerr Advanced Settings -->
     <string name="jellyseerr_advanced_settings">Advanced Request Settings</string>

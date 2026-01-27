@@ -67,15 +67,20 @@ fun SettingsJellyseerrScreen() {
 	var showServerUrlDialog by remember { mutableStateOf(false) }
 	var showJellyfinLoginDialog by remember { mutableStateOf(false) }
 	var showLocalLoginDialog by remember { mutableStateOf(false) }
+	var showLogoutConfirmDialog by remember { mutableStateOf(false) }
 	
 	// API key status
-	val apiKeyStatus = remember(userPrefs) {
-		val apiKey = userPrefs?.get(JellyseerrPreferences.apiKey) ?: ""
-		if (apiKey.isNotEmpty()) {
-			context.getString(R.string.jellyseerr_api_key_present)
-		} else {
-			context.getString(R.string.jellyseerr_api_key_absent)
+	val apiKeyStatus = if (userPrefs != null) {
+		val apiKey by rememberPreference(userPrefs, JellyseerrPreferences.apiKey)
+		val authMethod by rememberPreference(userPrefs, JellyseerrPreferences.authMethod)
+		
+		when {
+			apiKey.isNotEmpty() -> context.getString(R.string.jellyseerr_api_key_present)
+			authMethod.isNotEmpty() -> context.getString(R.string.jellyseerr_api_key_absent)
+			else -> context.getString(R.string.jellyseerr_not_logged_in)
 		}
+	} else {
+		context.getString(R.string.jellyseerr_not_logged_in)
 	}
 	
 	// Server URL display
@@ -151,6 +156,15 @@ fun SettingsJellyseerrScreen() {
 				headingContent = { Text(stringResource(R.string.jellyseerr_api_key_status)) },
 				captionContent = { Text(apiKeyStatus) },
 				onClick = { }
+			)
+		}
+
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_logout), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.jellyseerr_logout)) },
+				captionContent = { Text(stringResource(R.string.jellyseerr_logout_description)) },
+				onClick = { showLogoutConfirmDialog = true }
 			)
 		}
 
@@ -259,6 +273,33 @@ fun SettingsJellyseerrScreen() {
 				}
 			)
 		}
+	}
+
+	// Logout Confirmation Dialog
+	if (showLogoutConfirmDialog) {
+		AlertDialog(
+			onDismissRequest = { showLogoutConfirmDialog = false },
+			title = { Text(stringResource(R.string.jellyseerr_logout_confirm_title)) },
+			text = { Text(stringResource(R.string.jellyseerr_logout_confirm_message)) },
+			confirmButton = {
+				TextButton(
+					onClick = {
+						showLogoutConfirmDialog = false
+						scope.launch {
+							jellyseerrRepository.logout()
+							Toast.makeText(context, context.getString(R.string.jellyseerr_logout_success), Toast.LENGTH_SHORT).show()
+						}
+					}
+				) {
+					Text("Log Out")
+				}
+			},
+			dismissButton = {
+				TextButton(onClick = { showLogoutConfirmDialog = false }) {
+					Text("Cancel")
+				}
+			}
+		)
 	}
 }
 

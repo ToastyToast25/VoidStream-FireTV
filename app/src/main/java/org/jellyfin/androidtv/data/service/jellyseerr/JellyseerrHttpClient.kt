@@ -721,6 +721,10 @@ class JellyseerrHttpClient(
 	 * Handles 308 redirects by upgrading HTTP to HTTPS
 	 */
 	suspend fun loginLocal(email: String, password: String): Result<JellyseerrUserDto> = runCatching {
+		// Clear existing cookies before login to prevent stale auth data from causing issues
+		Timber.d("Jellyseerr: Clearing cookies before local login attempt")
+		clearCookies()
+		
 		var url = URLBuilder("$baseUrl/api/v1/auth/local").build()
 		val loginBody = mapOf("email" to email, "password" to password)
 		
@@ -835,6 +839,10 @@ class JellyseerrHttpClient(
 	 * Handles 308 redirects by upgrading HTTP to HTTPS
 	 */
 	suspend fun loginJellyfin(username: String, password: String, jellyfinUrl: String): Result<JellyseerrUserDto> = runCatching {
+		// Clear existing cookies before login to prevent stale auth data from causing issues
+		Timber.d("Jellyseerr: Clearing cookies before Jellyfin login attempt")
+		clearCookies()
+		
 		var url = URLBuilder("$baseUrl/api/v1/auth/jellyfin").build()
 		
 		Timber.d("Jellyseerr: Attempting Jellyfin login to URL: $url")
