@@ -37,8 +37,11 @@ import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrTvDetailsDto
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.TextUnderButton
+import org.jellyfin.androidtv.preference.UserPreferences
+import org.jellyfin.androidtv.preference.constant.NavbarPosition
+import org.jellyfin.androidtv.ui.shared.toolbar.LeftSidebarNavigation
+import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbar
 import org.jellyfin.androidtv.ui.shared.toolbar.MainToolbarActiveButton
-import org.jellyfin.androidtv.ui.shared.toolbar.NavigationOverlay
 import org.jellyfin.androidtv.util.dp
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -58,6 +61,7 @@ class MediaDetailsFragment : Fragment() {
 	private val backgroundService: BackgroundService by inject()
 	private val navigationRepository: NavigationRepository by inject()
 	private val apiClient: ApiClient by inject()
+	private val userPreferences: UserPreferences by inject()
 	
 	private var selectedItem: JellyseerrDiscoverItemDto? = null
 	private var movieDetails: JellyseerrMovieDetailsDto? = null
@@ -136,31 +140,64 @@ class MediaDetailsFragment : Fragment() {
 		
 		mainContainer.addView(scrollView)
 		
-		val sidebarContainer = FrameLayout(requireContext()).apply {
-			layoutParams = FrameLayout.LayoutParams(
-				FrameLayout.LayoutParams.WRAP_CONTENT,
-				FrameLayout.LayoutParams.MATCH_PARENT
-			).apply {
-				gravity = Gravity.START
-			}
-			elevation = 8f * resources.displayMetrics.density
-		}
+		val navbarPosition = userPreferences[UserPreferences.navbarPosition]
 		
-		val sidebarOverlay = ComposeView(requireContext()).apply {
-			id = sidebarId
-			layoutParams = FrameLayout.LayoutParams(
-				FrameLayout.LayoutParams.WRAP_CONTENT,
-				FrameLayout.LayoutParams.MATCH_PARENT
-			)
-			setContent {
-				NavigationOverlay(
-					activeButton = MainToolbarActiveButton.Jellyseerr
-				)
+		when (navbarPosition) {
+			NavbarPosition.LEFT -> {
+				val sidebarContainer = FrameLayout(requireContext()).apply {
+					layoutParams = FrameLayout.LayoutParams(
+						FrameLayout.LayoutParams.WRAP_CONTENT,
+						FrameLayout.LayoutParams.MATCH_PARENT
+					).apply {
+						gravity = Gravity.START
+					}
+					elevation = 8f * resources.displayMetrics.density
+				}
+				
+				val sidebarOverlay = ComposeView(requireContext()).apply {
+					id = sidebarId
+					layoutParams = FrameLayout.LayoutParams(
+						FrameLayout.LayoutParams.WRAP_CONTENT,
+						FrameLayout.LayoutParams.MATCH_PARENT
+					)
+					setContent {
+						LeftSidebarNavigation(
+							activeButton = MainToolbarActiveButton.Jellyseerr
+						)
+					}
+				}
+				toolbarContainer = sidebarOverlay
+				sidebarContainer.addView(sidebarOverlay)
+				mainContainer.addView(sidebarContainer)
+			}
+			NavbarPosition.TOP -> {
+				val topToolbarContainer = FrameLayout(requireContext()).apply {
+					layoutParams = FrameLayout.LayoutParams(
+						FrameLayout.LayoutParams.MATCH_PARENT,
+						FrameLayout.LayoutParams.WRAP_CONTENT
+					).apply {
+						gravity = Gravity.TOP
+					}
+					elevation = 8f * resources.displayMetrics.density
+				}
+				
+				val topToolbarOverlay = ComposeView(requireContext()).apply {
+					id = sidebarId
+					layoutParams = FrameLayout.LayoutParams(
+						FrameLayout.LayoutParams.MATCH_PARENT,
+						FrameLayout.LayoutParams.WRAP_CONTENT
+					)
+					setContent {
+						MainToolbar(
+							activeButton = MainToolbarActiveButton.Jellyseerr
+						)
+					}
+				}
+				toolbarContainer = topToolbarOverlay
+				topToolbarContainer.addView(topToolbarOverlay)
+				mainContainer.addView(topToolbarContainer)
 			}
 		}
-		toolbarContainer = sidebarOverlay
-		sidebarContainer.addView(sidebarOverlay)
-		mainContainer.addView(sidebarContainer)
 		
 		return mainContainer
 	}
