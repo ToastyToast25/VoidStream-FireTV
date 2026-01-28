@@ -83,6 +83,12 @@ interface JellyseerrRepository {
 	suspend fun regenerateApiKey(): Result<String>
 
 	/**
+	 * Authenticate with manually-entered API key (permanent auth, no expiration)
+	 * Users can generate keys in Jellyseerr web UI under Settings > Account > API Key
+	 */
+	suspend fun loginWithApiKey(apiKey: String, jellyseerrUrl: String): Result<JellyseerrUserDto>
+
+	/**
 	 * Check if the current session is still valid (cookie-based auth)
 	 * This verifies that the stored session cookie from a previous login is still active
 	 */
@@ -388,12 +394,10 @@ class JellyseerrRepositoryImpl(
 				// Remember which user we're initialized for
 				lastUserId = user.id.toString()
 				
-				// Get user-specific auth data
 				val userPrefs = getUserPreferences()
 				val storedApiKey = userPrefs?.get(JellyseerrPreferences.apiKey) ?: ""
 				val authMethod = userPrefs?.get(JellyseerrPreferences.authMethod) ?: ""
 
-				// Initialize with stored API key or cookie-based auth
 				if (enabled && !serverUrl.isNullOrEmpty()) {
 					httpClient = JellyseerrHttpClient(context, serverUrl, storedApiKey)
 					
@@ -649,25 +653,39 @@ class JellyseerrRepositoryImpl(
 		val result = tempClient.loginLocal(email, password)
 		
 		result.onSuccess { user ->
-			val apiKey = user.apiKey ?: ""
+			var apiKey = user.apiKey ?: ""
 			
-			// Initialize client with the API key from response
-			httpClient?.close()
-			httpClient = JellyseerrHttpClient(context, jellyseerrUrl, apiKey)
-			_isAvailable.emit(true)
-			initialized = true
-			
-			// Save to global preferences
 			preferences[JellyseerrPreferences.serverUrl] = jellyseerrUrl
 			preferences[JellyseerrPreferences.enabled] = true
 			
-			// Save credentials and API key to user-specific preferences
 			val userPrefs = getUserPreferences()
 			if (userPrefs != null) {
 				userPrefs[JellyseerrPreferences.authMethod] = "local"
 				userPrefs[JellyseerrPreferences.localEmail] = email
 				userPrefs[JellyseerrPreferences.localPassword] = password
-				userPrefs[JellyseerrPreferences.apiKey] = apiKey
+			}
+			
+			if (apiKey.isEmpty()) {
+				httpClient?.close()
+				httpClient = JellyseerrHttpClient(context, jellyseerrUrl, "")
+				_isAvailable.emit(true)
+				initialized = true
+				
+				val apiKeyResult = regenerateApiKey()
+				apiKeyResult.onSuccess { generatedKey ->
+					apiKey = generatedKey
+					httpClient?.close()
+					httpClient = JellyseerrHttpClient(context, jellyseerrUrl, apiKey)
+					userPrefs?.set(JellyseerrPreferences.apiKey, apiKey)
+				}.onFailure {
+					Timber.w("Jellyseerr: Failed to auto-generate API key (requires admin permissions), using cookie-based auth")
+				}
+			} else {
+				httpClient?.close()
+				httpClient = JellyseerrHttpClient(context, jellyseerrUrl, apiKey)
+				_isAvailable.emit(true)
+				initialized = true
+				userPrefs?.set(JellyseerrPreferences.apiKey, apiKey)
 			}
 		}.onFailure { error ->
 			Timber.e(error, "Jellyseerr: Local login failed, clearing cookies and invalidating session cache")
@@ -706,6 +724,46 @@ class JellyseerrRepositoryImpl(
 		}
 		
 		result
+	}
+
+	override suspend fun loginWithApiKey(apiKey: String, jellyseerrUrl: String): Result<JellyseerrUserDto> = withContext(Dispatchers.IO) {
+		val currentUserId = userRepository.currentUser.value?.id?.toString()
+		if (currentUserId.isNullOrEmpty()) {
+			return@withContext Result.failure(IllegalStateException("No active Jellyfin user"))
+		}
+
+		JellyseerrHttpClient.switchCookieStorage(currentUserId)
+		
+		val userPrefs = getUserPreferences()
+		userPrefs?.apply {
+			set(JellyseerrPreferences.authMethod, "apikey")
+			set(JellyseerrPreferences.apiKey, apiKey)
+			set(JellyseerrPreferences.serverUrl, jellyseerrUrl)
+		}
+
+		initialize(jellyseerrUrl, apiKey)
+		
+		val client = httpClient ?: return@withContext Result.failure(
+			IllegalStateException("Failed to initialize HTTP client")
+		)
+		
+		val userResult = client.getCurrentUser()
+		
+		userResult.onSuccess {
+			initialized = true
+			_isAvailable.emit(true)
+		}.onFailure { error ->
+			Timber.e(error, "Jellyseerr: API key validation failed")
+			userPrefs?.apply {
+				set(JellyseerrPreferences.authMethod, "")
+				set(JellyseerrPreferences.apiKey, "")
+				set(JellyseerrPreferences.serverUrl, "")
+			}
+			initialized = false
+			_isAvailable.emit(false)
+		}
+		
+		userResult
 	}
 
 	override suspend fun isSessionValid(): Result<Boolean> = withContext(Dispatchers.IO) {

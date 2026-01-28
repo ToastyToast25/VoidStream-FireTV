@@ -9,6 +9,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -21,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.UserRepository
@@ -67,24 +69,32 @@ fun SettingsJellyseerrScreen() {
 	var showServerUrlDialog by remember { mutableStateOf(false) }
 	var showJellyfinLoginDialog by remember { mutableStateOf(false) }
 	var showLocalLoginDialog by remember { mutableStateOf(false) }
+	var showApiKeyLoginDialog by remember { mutableStateOf(false) }
 	var showLogoutConfirmDialog by remember { mutableStateOf(false) }
 	
-	// API key status
-	val apiKeyStatus = if (userPrefs != null) {
-		val apiKey by rememberPreference(userPrefs, JellyseerrPreferences.apiKey)
-		val authMethod by rememberPreference(userPrefs, JellyseerrPreferences.authMethod)
-		
-		when {
-			apiKey.isNotEmpty() -> context.getString(R.string.jellyseerr_api_key_present)
-			authMethod.isNotEmpty() -> context.getString(R.string.jellyseerr_api_key_absent)
-			else -> context.getString(R.string.jellyseerr_not_logged_in)
-		}
-	} else {
-		context.getString(R.string.jellyseerr_not_logged_in)
+	var apiKey by remember { mutableStateOf(userPrefs?.get(JellyseerrPreferences.apiKey) ?: "") }
+	var authMethod by remember { mutableStateOf(userPrefs?.get(JellyseerrPreferences.authMethod) ?: "") }
+	
+	LaunchedEffect(userPrefs) {
+		apiKey = userPrefs?.get(JellyseerrPreferences.apiKey) ?: ""
+		authMethod = userPrefs?.get(JellyseerrPreferences.authMethod) ?: ""
 	}
 	
-	// Server URL display
-	val serverUrl = remember { jellyseerrPreferences[JellyseerrPreferences.serverUrl] ?: "" }
+	LaunchedEffect(Unit) {
+		while (true) {
+			delay(500)
+			apiKey = userPrefs?.get(JellyseerrPreferences.apiKey) ?: ""
+			authMethod = userPrefs?.get(JellyseerrPreferences.authMethod) ?: ""
+		}
+	}
+	
+	val apiKeyStatus = when {
+		apiKey.isNotEmpty() -> "Permanent API key active"
+		authMethod.isNotEmpty() -> "Cookie-based auth (expires ~30 days)"
+		else -> context.getString(R.string.jellyseerr_not_logged_in)
+	}
+	
+	val serverUrl = remember { jellyseerrPreferences[JellyseerrPreferences.serverUrl] }
 
 	SettingsColumn {
 		// Server Configuration
@@ -153,6 +163,21 @@ fun SettingsJellyseerrScreen() {
 		item {
 			ListButton(
 				leadingContent = { Icon(painterResource(R.drawable.ic_lightbulb), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.jellyseerr_login_api_key)) },
+				captionContent = { Text(stringResource(R.string.jellyseerr_login_api_key_description)) },
+				onClick = { 
+					if (enabled) {
+						showApiKeyLoginDialog = true
+					} else {
+						Toast.makeText(context, "Please enable Jellyseerr first", Toast.LENGTH_SHORT).show()
+					}
+				}
+			)
+		}
+
+		item {
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_lock), contentDescription = null) },
 				headingContent = { Text(stringResource(R.string.jellyseerr_api_key_status)) },
 				captionContent = { Text(apiKeyStatus) },
 				onClick = { }
@@ -218,7 +243,7 @@ fun SettingsJellyseerrScreen() {
 
 	// Jellyfin Login Dialog
 	if (showJellyfinLoginDialog) {
-		val currentServerUrl = jellyseerrPreferences[JellyseerrPreferences.serverUrl] ?: ""
+		val currentServerUrl = jellyseerrPreferences[JellyseerrPreferences.serverUrl]
 		if (currentServerUrl.isBlank()) {
 			Toast.makeText(context, "Please set server URL first", Toast.LENGTH_SHORT).show()
 			showJellyfinLoginDialog = false
@@ -251,7 +276,7 @@ fun SettingsJellyseerrScreen() {
 
 	// Local Login Dialog
 	if (showLocalLoginDialog) {
-		val currentServerUrl = jellyseerrPreferences[JellyseerrPreferences.serverUrl] ?: ""
+		val currentServerUrl = jellyseerrPreferences[JellyseerrPreferences.serverUrl]
 		if (currentServerUrl.isBlank()) {
 			Toast.makeText(context, "Please set server URL first", Toast.LENGTH_SHORT).show()
 			showLocalLoginDialog = false
@@ -268,6 +293,31 @@ fun SettingsJellyseerrScreen() {
 							serverUrl = currentServerUrl,
 							email = email,
 							password = password
+						)
+					}
+				}
+			)
+		}
+	}
+
+	// API Key Login Dialog
+	if (showApiKeyLoginDialog) {
+		val currentServerUrl = jellyseerrPreferences[JellyseerrPreferences.serverUrl]
+		if (currentServerUrl.isBlank()) {
+			Toast.makeText(context, "Please set server URL first", Toast.LENGTH_SHORT).show()
+			showApiKeyLoginDialog = false
+		} else {
+			ApiKeyLoginDialog(
+				onDismiss = { showApiKeyLoginDialog = false },
+				onLogin = { apiKey ->
+					showApiKeyLoginDialog = false
+					scope.launch {
+						performApiKeyLogin(
+							context = context,
+							jellyseerrRepository = jellyseerrRepository,
+							jellyseerrPreferences = jellyseerrPreferences,
+							serverUrl = currentServerUrl,
+							apiKey = apiKey
 						)
 					}
 				}
@@ -438,6 +488,49 @@ private fun LocalLoginDialog(
 	)
 }
 
+@Composable
+private fun ApiKeyLoginDialog(
+	onDismiss: () -> Unit,
+	onLogin: (apiKey: String) -> Unit
+) {
+	var apiKey by remember { mutableStateOf("") }
+	
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		title = { Text(stringResource(R.string.jellyseerr_login_api_key)) },
+		text = {
+			Column {
+				Text(stringResource(R.string.jellyseerr_api_key_input_description))
+				OutlinedTextField(
+					value = apiKey,
+					onValueChange = { apiKey = it },
+					modifier = Modifier
+						.fillMaxWidth()
+						.padding(top = 16.dp),
+					placeholder = { Text(stringResource(R.string.jellyseerr_api_key_input)) },
+					singleLine = true
+				)
+			}
+		},
+		confirmButton = {
+			TextButton(
+				onClick = { 
+					if (apiKey.isNotEmpty()) {
+						onLogin(apiKey.trim())
+					}
+				}
+			) {
+				Text("Login")
+			}
+		},
+		dismissButton = {
+			TextButton(onClick = onDismiss) {
+				Text("Cancel")
+			}
+		}
+	)
+}
+
 private suspend fun performJellyfinLogin(
 	context: android.content.Context,
 	jellyseerrRepository: JellyseerrRepository,
@@ -468,10 +561,10 @@ private suspend fun performJellyfinLogin(
 			jellyseerrPreferences[JellyseerrPreferences.enabled] = true
 			jellyseerrPreferences[JellyseerrPreferences.lastConnectionSuccess] = true
 			
-			val authType = if (apiKey.isEmpty()) {
-				"session cookie (persists across restarts, ~30 day expiration)"
+			val authType = if (apiKey.isNotEmpty()) {
+				"permanent API key"
 			} else {
-				"API key (permanent)"
+				"cookie-based auth (expires ~30 days)"
 			}
 			
 			Toast.makeText(context, "Connected successfully using $authType!", Toast.LENGTH_LONG).show()
@@ -495,22 +588,48 @@ private suspend fun performLocalLogin(
 	password: String
 ) {
 	try {
-		Timber.d("Jellyseerr: Performing local login to: $serverUrl")
-		
 		val result = jellyseerrRepository.loginLocal(email, password, serverUrl)
 		
 		result.onSuccess { user ->
-			Timber.i("Jellyseerr: Local login successful - User ID: ${user.id}, Username: ${user.username}")
 			jellyseerrPreferences[JellyseerrPreferences.enabled] = true
 			jellyseerrPreferences[JellyseerrPreferences.lastConnectionSuccess] = true
 			
-			Toast.makeText(context, "Logged in successfully with permanent API key!", Toast.LENGTH_LONG).show()
+			val message = if (user.apiKey?.isNotEmpty() == true) {
+				"Logged in successfully using permanent API key!"
+			} else {
+				"Logged in successfully using cookie-based auth (expires ~30 days)"
+			}
+			Toast.makeText(context, message, Toast.LENGTH_LONG).show()
 		}.onFailure { error ->
-			Timber.e(error, "Jellyseerr: Local login failed - ${error.message}")
+			Timber.e(error, "Jellyseerr: Local login failed")
 			Toast.makeText(context, "Login failed: ${error.message}", Toast.LENGTH_LONG).show()
 		}
 	} catch (e: Exception) {
 		Timber.e(e, "Jellyseerr: Local login exception")
+		Toast.makeText(context, "Login error: ${e.message}", Toast.LENGTH_LONG).show()
+	}
+}
+
+private suspend fun performApiKeyLogin(
+	context: android.content.Context,
+	jellyseerrRepository: JellyseerrRepository,
+	jellyseerrPreferences: JellyseerrPreferences,
+	serverUrl: String,
+	apiKey: String
+) {
+	try {
+		val result = jellyseerrRepository.loginWithApiKey(apiKey, serverUrl)
+		
+		result.onSuccess {
+			jellyseerrPreferences[JellyseerrPreferences.enabled] = true
+			jellyseerrPreferences[JellyseerrPreferences.lastConnectionSuccess] = true
+			Toast.makeText(context, "Logged in successfully using permanent API key!", Toast.LENGTH_LONG).show()
+		}.onFailure { error ->
+			Timber.e(error, "Jellyseerr: API key login failed")
+			Toast.makeText(context, "Login failed: ${error.message}", Toast.LENGTH_LONG).show()
+		}
+	} catch (e: Exception) {
+		Timber.e(e, "Jellyseerr: API key login exception")
 		Toast.makeText(context, "Login error: ${e.message}", Toast.LENGTH_LONG).show()
 	}
 }
