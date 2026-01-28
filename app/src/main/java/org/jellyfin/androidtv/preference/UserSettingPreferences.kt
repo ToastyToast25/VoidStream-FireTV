@@ -65,6 +65,8 @@ class UserSettingPreferences(
 		// Rating settings
 		val enableAdditionalRatings = booleanPreference("enableAdditionalRatings", false)
 		val mdblistApiKey = stringPreference("mdblistApiKey", "")
+		val enableEpisodeRatings = booleanPreference("enableEpisodeRatings", false)
+		val tmdbApiKey = stringPreference("tmdbApiKey", "")
 		
 		/**
 		 * Comma-separated list of enabled rating types.

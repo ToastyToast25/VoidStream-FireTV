@@ -553,9 +553,9 @@ private fun SingleRating(source: String, rating: Float) {
 			"tomatoes_audience" -> "${(rating * 100).toInt()}%"
 			"stars" -> String.format("%.1f", rating * 10)
 			"imdb" -> String.format("%.1f", rating)
-			"tmdb", "metacritic", "trakt" -> rating.toInt().toString()
+			"tmdb", "metacritic", "trakt" -> "${rating.toInt()}%"
 			"letterboxd", "rogerebert", "myanimelist", "kinopoisk", "douban" -> String.format("%.1f", rating)
-			"anilist" -> (rating * 100f).toInt().toString()
+			"anilist" -> "${(rating * 100f).toInt()}%"
 			"allocine" -> String.format("%.1f", rating * 5f)
 			else -> String.format("%.1f", rating)
 		}

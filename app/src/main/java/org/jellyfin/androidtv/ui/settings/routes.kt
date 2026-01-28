@@ -46,6 +46,7 @@ import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMediaBar
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMediaBarOpacityScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinNavbarPositionScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinMdblistApiKeyScreen
+import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinTmdbApiKeyScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinParentalControlsScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinScreen
 import org.jellyfin.androidtv.ui.settings.screen.moonfin.SettingsMoonfinSeasonalSurpriseScreen
@@ -138,6 +139,7 @@ object Routes {
 	const val MOONFIN_DETAILS_BLUR = "/moonfin/details-blur"
 	const val MOONFIN_BROWSING_BLUR = "/moonfin/browsing-blur"
 	const val MOONFIN_MDBLIST_API_KEY = "/moonfin/mdblist-api-key"
+	const val MOONFIN_TMDB_API_KEY = "/moonfin/tmdb-api-key"
 	const val MOONFIN_PARENTAL_CONTROLS = "/moonfin/parental-controls"
 	const val MOONFIN_SYNCPLAY = "/moonfin/syncplay"
 	const val MOONFIN_SYNCPLAY_MIN_DELAY = "/moonfin/syncplay/min-delay-speed-to-sync"
@@ -403,6 +405,9 @@ val routes = mapOf<String, RouteComposable>(
 	},
 	Routes.MOONFIN_MDBLIST_API_KEY to {
 		SettingsMoonfinMdblistApiKeyScreen()
+	},
+	Routes.MOONFIN_TMDB_API_KEY to {
+		SettingsMoonfinTmdbApiKeyScreen()
 	},
 	Routes.MOONFIN_PARENTAL_CONTROLS to {
 		SettingsMoonfinParentalControlsScreen()

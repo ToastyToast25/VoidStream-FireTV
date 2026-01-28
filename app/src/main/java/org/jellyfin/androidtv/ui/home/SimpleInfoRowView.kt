@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.repository.MdbListRepository
+import org.jellyfin.androidtv.data.repository.TmdbRepository
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.RatingType
 import org.jellyfin.androidtv.ui.composable.getResolutionName
@@ -36,6 +37,7 @@ class SimpleInfoRowView @JvmOverloads constructor(
 	
 	private val userSettingPreferences by inject<UserSettingPreferences>()
 	private val mdbListRepository by inject<MdbListRepository>()
+	private val tmdbRepository by inject<TmdbRepository>()
 	private val items = mutableListOf<TextView>()
 	private var currentItemId: String? = null
 	
@@ -152,13 +154,33 @@ class SimpleInfoRowView @JvmOverloads constructor(
 	
 	private fun showAllRatings(item: BaseItemDto, enabledRatings: List<RatingType>, startIndex: Int): Int {
 		val apiKey = userSettingPreferences[UserSettingPreferences.mdblistApiKey]
+		val tmdbApiKey = userSettingPreferences[UserSettingPreferences.tmdbApiKey]
+		val enableEpisodeRatings = userSettingPreferences[UserSettingPreferences.enableEpisodeRatings]
 		val itemIdAtFetchTime = item.id.toString()
+		val isEpisode = item.type == BaseItemKind.EPISODE
 		var index = startIndex
 		
-		// Track indices for each rating type so we can update them after API fetch
 		val ratingIndices = mutableMapOf<RatingType, Int>()
 		
-		// Show local ratings immediately (RT, stars)
+		if (enableEpisodeRatings && isEpisode && tmdbApiKey.isNotBlank()) {
+			val episodeRatingIndex = index
+			findViewTreeLifecycleOwner()?.lifecycleScope?.launch {
+				try {
+					val episodeRating = tmdbRepository.getEpisodeRating(item, tmdbApiKey)
+					
+					if (currentItemId == itemIdAtFetchTime && episodeRating != null) {
+						withContext(Dispatchers.Main) {
+							if (currentItemId == itemIdAtFetchTime) {
+								val formattedRating = "${(episodeRating * 10f).toInt()}%"
+								setItemTextWithIcon(episodeRatingIndex, formattedRating, R.drawable.ic_tmdb)
+							}
+						}
+					}
+				} catch (_: Exception) { }
+			}
+			index++
+		}
+		
 		enabledRatings.forEach { ratingType ->
 			when (ratingType) {
 				RatingType.RATING_TOMATOES -> {
@@ -223,9 +245,7 @@ class SimpleInfoRowView @JvmOverloads constructor(
 							}
 						}
 					}
-				} catch (e: Exception) {
-					// Silently fail
-				}
+				} catch (_: Exception) { }
 			}
 		}
 		
@@ -299,9 +319,7 @@ class SimpleInfoRowView @JvmOverloads constructor(
 									}
 								}
 							}
-						} catch (e: Exception) {
-							// Silently fail
-						}
+						} catch (_: Exception) { }
 					}
 					index++
 				} else {
@@ -318,13 +336,13 @@ class SimpleInfoRowView @JvmOverloads constructor(
 	private fun formatRating(source: String, rating: Float): String {
 		return when (source) {
 			"imdb" -> String.format("%.1f", rating)
-			"tmdb" -> rating.toInt().toString()
-			"metacritic" -> rating.toInt().toString()
+			"tmdb" -> "${rating.toInt()}%"
+			"metacritic" -> "${rating.toInt()}%"
 			"trakt" -> "${rating.toInt()}%"
 			"letterboxd" -> String.format("%.1f", rating)
 			"rogerebert" -> String.format("%.1f", rating)
 			"myanimelist" -> String.format("%.1f", rating)
-			"anilist" -> rating.toInt().toString()
+			"anilist" -> "${rating.toInt()}%"
 			"kinopoisk" -> String.format("%.1f", rating)
 			"allocine" -> String.format("%.1f", rating)
 			"douban" -> String.format("%.1f", rating)

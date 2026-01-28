@@ -121,6 +121,34 @@ fun SettingsCustomizationScreen() {
 			)
 		}
 
+		// Episode Ratings
+		item { ListSection(headingContent = { Text(stringResource(R.string.pref_episode_ratings)) }) }
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			var enableEpisodeRatings by rememberPreference(userSettingPreferences, UserSettingPreferences.enableEpisodeRatings)
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_star), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_episode_ratings)) },
+				captionContent = { Text(stringResource(R.string.pref_episode_ratings_description)) },
+				trailingContent = { Checkbox(checked = enableEpisodeRatings) },
+				onClick = { enableEpisodeRatings = !enableEpisodeRatings }
+			)
+		}
+
+		item {
+			val userSettingPreferences = koinInject<UserSettingPreferences>()
+			val enableEpisodeRatings by rememberPreference(userSettingPreferences, UserSettingPreferences.enableEpisodeRatings)
+			var tmdbApiKey by rememberPreference(userSettingPreferences, UserSettingPreferences.tmdbApiKey)
+			ListButton(
+				leadingContent = { Icon(painterResource(R.drawable.ic_key), contentDescription = null) },
+				headingContent = { Text(stringResource(R.string.pref_tmdb_api_key)) },
+				captionContent = { Text(if (tmdbApiKey.isNotEmpty()) "API Key: ${tmdbApiKey.take(8)}..." else stringResource(R.string.pref_tmdb_api_key_description)) },
+				enabled = enableEpisodeRatings,
+				onClick = { router.push(Routes.MOONFIN_TMDB_API_KEY) }
+			)
+		}
+
 		// Toolbar Customization (Moonfin)
 		item { ListSection(headingContent = { Text(stringResource(R.string.pref_toolbar_customization)) }) }
 

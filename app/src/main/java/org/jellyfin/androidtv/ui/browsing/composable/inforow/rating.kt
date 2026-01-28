@@ -23,11 +23,14 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.repository.MdbListRepository
+import org.jellyfin.androidtv.data.repository.TmdbRepository
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.constant.RatingType
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.BaseItemKind
 import org.koin.compose.koinInject
+import timber.log.Timber
 import java.text.NumberFormat
 
 @Composable
@@ -96,9 +99,12 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 	val context = LocalContext.current
 	val userSettingPreferences = koinInject<UserSettingPreferences>()
 	val mdbListRepository = koinInject<MdbListRepository>()
+	val tmdbRepository = koinInject<TmdbRepository>()
 	val enableAdditionalRatings = userSettingPreferences[UserSettingPreferences.enableAdditionalRatings]
 	val apiKey = userSettingPreferences[UserSettingPreferences.mdblistApiKey]
 	val enabledRatingsStr = userSettingPreferences[UserSettingPreferences.enabledRatings]
+	val enableEpisodeRatings = userSettingPreferences[UserSettingPreferences.enableEpisodeRatings]
+	val tmdbApiKey = userSettingPreferences[UserSettingPreferences.tmdbApiKey]
 
 	val enabledRatings = remember(enabledRatingsStr) {
 		enabledRatingsStr.split(",")
@@ -113,9 +119,27 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 	var hasShownToast by remember { mutableStateOf(false) }
 	var apiRatings by remember { mutableStateOf<Map<String, Float>?>(null) }
 	var isLoading by remember { mutableStateOf(false) }
+	var episodeRating by remember { mutableStateOf<Float?>(null) }
+	var isLoadingEpisode by remember { mutableStateOf(false) }
+
+	val isEpisode = item.type == BaseItemKind.EPISODE
 
 	val needsApiRatings = enabledRatings.any { 
 		it !in listOf(RatingType.RATING_TOMATOES, RatingType.RATING_STARS) 
+	}
+
+	// Fetch episode rating from TMDB if enabled
+	if (enableEpisodeRatings && isEpisode && tmdbApiKey.isNotBlank()) {
+		LaunchedEffect(item.id, tmdbApiKey) {
+			isLoadingEpisode = true
+			try {
+				episodeRating = tmdbRepository.getEpisodeRating(item, tmdbApiKey)
+			} catch (e: Exception) {
+				Timber.e(e, "Failed to fetch episode rating for item ${item.id}")
+			} finally {
+				isLoadingEpisode = false
+			}
+		}
 	}
 
 	if (enableAdditionalRatings && needsApiRatings) {
@@ -135,17 +159,21 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 			try {
 				apiRatings = mdbListRepository.getRatings(item, apiKey)
 			} catch (e: Exception) {
+				Timber.e(e, "Failed to fetch MDBList ratings for item ${item.id}")
 			} finally {
 				isLoading = false
 			}
 		}
 	}
 
-	val allRatings = remember(apiRatings, item.criticRating, item.communityRating) {
+	val allRatings = remember(apiRatings, item.criticRating, item.communityRating, episodeRating) {
 		buildMap {
 			item.criticRating?.let { put("RT", it / 100f) }
 			apiRatings?.get("tomatoes_audience")?.let { put("RT_AUDIENCE", it / 100f) }
 			item.communityRating?.let { put("STARS", it / 10f) }
+			
+			// Episode rating from TMDB (already 0-10 scale)
+			episodeRating?.let { put("tmdb_episode", it / 10f) }
 
 			apiRatings?.let { ratings ->
 				ratings["imdb"]?.let { put("imdb", it / 10f) }
@@ -163,7 +191,8 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 		}
 	}
 
-	if (needsApiRatings && enableAdditionalRatings && isLoading && apiKey.isNotBlank()) {
+	if ((needsApiRatings && enableAdditionalRatings && isLoading && apiKey.isNotBlank()) ||
+		(enableEpisodeRatings && isEpisode && isLoadingEpisode && tmdbApiKey.isNotBlank())) {
 		return
 	}
 
@@ -171,7 +200,17 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 		horizontalArrangement = Arrangement.spacedBy(8.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
+		// Show episode-specific TMDB rating first if available
+		if (enableEpisodeRatings && isEpisode && episodeRating != null) {
+			RatingDisplay("tmdb_episode", episodeRating!! / 10f)
+		}
+		
 		enabledRatings.forEach { ratingType ->
+			// Skip TMDB for episodes if episode ratings are enabled (we show episode-specific above)
+			if (isEpisode && enableEpisodeRatings && ratingType == RatingType.RATING_TMDB && episodeRating != null) {
+				return@forEach
+			}
+			
 			val (sourceKey, rating) = when (ratingType) {
 				RatingType.RATING_TOMATOES -> "RT" to allRatings["RT"]
 				RatingType.RATING_RT_AUDIENCE -> "RT_AUDIENCE" to allRatings["RT_AUDIENCE"]
@@ -225,13 +264,14 @@ private fun RatingDisplay(sourceKey: String, rating: Float) {
 		}
 		"STARS" -> InfoRowCommunityRating(rating)
 		"imdb" -> RatingItemWithLogo(R.drawable.ic_imdb, "IMDB", String.format("%.1f", rating * 10f))
-		"tmdb" -> RatingItemWithLogo(R.drawable.ic_tmdb, "TMDB", (rating * 100f).toInt().toString())
-		"metacritic" -> RatingItemWithLogo(R.drawable.ic_metacritic, "Metacritic", (rating * 100f).toInt().toString())
-		"trakt" -> RatingItemWithLogo(R.drawable.ic_trakt, "Trakt", (rating * 100f).toInt().toString() + "%")
+		"tmdb" -> RatingItemWithLogo(R.drawable.ic_tmdb, "TMDB", "${(rating * 100f).toInt()}%")
+		"tmdb_episode" -> RatingItemWithLogo(R.drawable.ic_tmdb, "TMDB Episode", "${(rating * 100f).toInt()}%")
+		"metacritic" -> RatingItemWithLogo(R.drawable.ic_metacritic, "Metacritic", "${(rating * 100f).toInt()}%")
+		"trakt" -> RatingItemWithLogo(R.drawable.ic_trakt, "Trakt", "${(rating * 100f).toInt()}%")
 		"letterboxd" -> RatingItemWithLogo(R.drawable.ic_letterboxd, "Letterboxd", String.format("%.1f", rating * 5f))
 		"rogerebert" -> RatingItemWithLogo(R.drawable.ic_roger_ebert, "Roger Ebert", String.format("%.1f", rating * 4f))
 		"myanimelist" -> RatingItemWithLogo(R.drawable.ic_myanimelist, "MyAnimeList", String.format("%.1f", rating * 10f))
-		"anilist" -> RatingItemWithLogo(R.drawable.ic_anilist, "AniList", (rating * 100f).toInt().toString())
+		"anilist" -> RatingItemWithLogo(R.drawable.ic_anilist, "AniList", "${(rating * 100f).toInt()}%")
 		"kinopoisk" -> RatingItemWithLogo(R.drawable.ic_kinopoisk, "Kinopoisk", String.format("%.1f", rating * 10f))
 		"allocine" -> RatingItemWithLogo(R.drawable.ic_allocine, "AlloCiné", String.format("%.1f", rating * 5f))
 		"douban" -> RatingItemWithLogo(R.drawable.ic_douban, "Douban", String.format("%.1f", rating * 10f))

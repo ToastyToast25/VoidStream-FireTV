@@ -924,6 +924,18 @@
     <string name="pref_rating_source_allocine">AlloCiné</string>
     <string name="pref_rating_source_douban">Douban</string>
     
+    <!-- Episode Ratings -->
+    <string name="pref_episode_ratings">Episode Ratings</string>
+    <string name="pref_episode_ratings_description">Show TMDB ratings for individual TV episodes</string>
+    <string name="pref_tmdb_api_key">TMDB API Key</string>
+    <string name="pref_tmdb_api_key_description">Get a free API key from themoviedb.org</string>
+    <string name="pref_tmdb_api_key_label">API Key</string>
+    <string name="pref_tmdb_api_key_hint">Enter your TMDB API key</string>
+    <string name="lbl_clear">Clear</string>
+    <string name="msg_api_key_saved">API key saved</string>
+    <string name="msg_api_key_cleared">API key cleared</string>
+    <string name="msg_api_key_invalid">API key must be at least 16 characters</string>
+    
     <!-- Toolbar Customization -->
     <string name="pref_toolbar_customization">Toolbar Customization</string>
     <string name="pref_navbar_position">Navigation Bar Position</string>

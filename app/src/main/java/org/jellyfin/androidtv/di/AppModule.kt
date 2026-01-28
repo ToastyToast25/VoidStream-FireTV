@@ -28,6 +28,7 @@ import org.jellyfin.androidtv.data.repository.JellyseerrRepository
 import org.jellyfin.androidtv.data.repository.JellyseerrRepositoryImpl
 import org.jellyfin.androidtv.data.repository.LocalWatchlistRepository
 import org.jellyfin.androidtv.data.repository.MdbListRepository
+import org.jellyfin.androidtv.data.repository.TmdbRepository
 import org.jellyfin.androidtv.data.repository.NotificationsRepository
 import org.jellyfin.androidtv.data.repository.NotificationsRepositoryImpl
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
@@ -185,6 +186,7 @@ val appModule = module {
 	factory(named("user")) { (userId: String) -> JellyseerrPreferences(androidContext(), userId) }
 	single<JellyseerrRepository> { JellyseerrRepositoryImpl(androidContext(), get(named("global")), get()) }
 	single { MdbListRepository(get<OkHttpFactory>().createClient(get())) }
+	single { TmdbRepository(get<OkHttpFactory>().createClient(get()), get()) }
 
 	viewModel { StartupViewModel(get(), get(), get(), get()) }
 	viewModel { UserLoginViewModel(get(), get(), get(), get(defaultDeviceInfo)) }
