@@ -14,6 +14,7 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.base.Icon
 import org.jellyfin.androidtv.ui.base.Text
 import org.jellyfin.androidtv.ui.base.list.ListButton
@@ -39,14 +40,16 @@ fun SettingsLibrariesScreen() {
 	val userViewsRepository = koinInject<UserViewsRepository>()
 	val multiServerRepository = koinInject<MultiServerRepository>()
 	val sessionRepository = koinInject<SessionRepository>()
+	val userPreferences = koinInject<UserPreferences>()
 	
 	var libraries by remember { mutableStateOf<List<LibraryDisplayItem>>(emptyList()) }
 	val currentSession by sessionRepository.currentSession.collectAsState()
 	
 	LaunchedEffect(Unit) {
 		val loggedInServers = multiServerRepository.getLoggedInServers()
+		val enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
 		
-		if (loggedInServers.size > 1) {
+		if (enableMultiServer && loggedInServers.size > 1) {
 			val aggregatedLibraries = multiServerRepository.getAggregatedLibraries(includeHidden = true)
 			libraries = aggregatedLibraries.map { aggregated ->
 				LibraryDisplayItem(
