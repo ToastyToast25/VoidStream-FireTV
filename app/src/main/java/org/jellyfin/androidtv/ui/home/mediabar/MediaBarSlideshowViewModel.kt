@@ -20,6 +20,7 @@ import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.repository.ItemMutationRepository
 import org.jellyfin.androidtv.data.repository.MultiServerRepository
 import org.jellyfin.androidtv.data.repository.ParentalControlsRepository
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.sdk.api.client.ApiClient
 import android.content.Context
@@ -45,6 +46,7 @@ class MediaBarSlideshowViewModel(
 	private val imageLoader: ImageLoader,
 	private val multiServerRepository: MultiServerRepository,
 	private val parentalControlsRepository: ParentalControlsRepository,
+	private val userPreferences: UserPreferences,
 ) : ViewModel() {
 	private fun getConfig() = MediaBarConfig(
 		maxItems = userSettingPreferences[UserSettingPreferences.mediaBarItemCount].toIntOrNull() ?: 10
@@ -212,8 +214,9 @@ class MediaBarSlideshowViewModel(
 				multiServerRepository.getLoggedInServers()
 			}
 			
-			val useMultiServer = loggedInServers.size > 1
-			Timber.d("MediaBar: Loading items from ${loggedInServers.size} server(s), multi-server mode: $useMultiServer")
+			val enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
+			val useMultiServer = enableMultiServer && loggedInServers.size > 1
+			Timber.d("MediaBar: Loading items from ${loggedInServers.size} server(s), multi-server enabled: $enableMultiServer, using: $useMultiServer")
 			// Get current user ID for single-server mode
 			val currentUserId = userRepository.currentUser.value?.id
 			// Fetch items based on user preference

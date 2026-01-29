@@ -489,9 +489,11 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
                     public void onClick(View v) {
                         // If this is a genre, shuffle within that genre
                         if (mBaseItem.getType() == BaseItemKind.GENRE) {
+                            java.util.UUID serverId = org.jellyfin.androidtv.util.UUIDUtils.parseUUID(mBaseItem.getServerId());
                             org.jellyfin.androidtv.ui.shuffle.ShuffleUtilsKt.executeGenreShuffle(
                                 mBaseItem.getName(),
                                 mBaseItem.getParentId(),
+                                serverId,
                                 KoinJavaComponent.get(org.jellyfin.androidtv.preference.UserPreferences.class),
                                 KoinJavaComponent.get(NavigationRepository.class)
                             );

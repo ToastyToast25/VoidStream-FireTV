@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.acra.ACRA
 import org.jellyfin.androidtv.util.apiclient.ioCall
+import org.jellyfin.androidtv.auth.repository.ServerRepository
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.data.eventhandling.SocketHandler
 import org.jellyfin.androidtv.data.repository.NotificationsRepository
@@ -83,13 +84,13 @@ class JellyfinApplication : Application(), SingletonImageLoader.Factory {
 	suspend fun onSessionStart() = withContext(Dispatchers.IO) {
 		val workManager by inject<WorkManager>()
 		val socketListener by inject<SocketHandler>()
+		val serverRepository by inject<ServerRepository>()
 
-		// Update background worker
+		launch { serverRepository.loadStoredServers() }
+
 		launch {
-			// Cancel all current workers
 			workManager.cancelAllWork().await()
 
-			// Recreate periodic workers
 			workManager.enqueueUniquePeriodicWork(
 				LeanbackChannelWorker.PERIODIC_UPDATE_REQUEST_NAME,
 				ExistingPeriodicWorkPolicy.UPDATE,
@@ -108,7 +109,6 @@ class JellyfinApplication : Application(), SingletonImageLoader.Factory {
 			).await()
 		}
 
-		// Update WebSockets
 		launch { socketListener.updateSession() }
 	}
 

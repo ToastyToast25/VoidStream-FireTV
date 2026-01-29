@@ -5,7 +5,6 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.util.apiclient.Response
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
@@ -17,22 +16,14 @@ import timber.log.Timber
 import java.util.UUID
 
 object ItemLauncherHelper {
-	private fun resolveApiClient(serverId: UUID?, userId: UUID?): ApiClient {
+	private fun resolveApiClient(serverId: UUID?): ApiClient {
 		val defaultApi by KoinJavaComponent.inject<ApiClient>(ApiClient::class.java)
 		
-		return when {
-			serverId != null && userId != null -> {
-				val apiClientFactory by KoinJavaComponent.inject<ApiClientFactory>(ApiClientFactory::class.java)
-				apiClientFactory.getApiClient(serverId, userId) ?: run {
-					Timber.w("ItemLauncherHelper: Could not get API client for server $serverId user $userId, using default")
-					defaultApi
-				}
-			}
-			serverId != null -> {
-				val apiClientFactory by KoinJavaComponent.inject<ApiClientFactory>(ApiClientFactory::class.java)
-				apiClientFactory.getApiClientForServer(serverId) ?: defaultApi
-			}
-			else -> defaultApi
+		return if (serverId != null) {
+			val apiClientFactory by KoinJavaComponent.inject<ApiClientFactory>(ApiClientFactory::class.java)
+			apiClientFactory.getApiClientForServer(serverId) ?: defaultApi
+		} else {
+			defaultApi
 		}
 	}
 	
@@ -44,9 +35,7 @@ object ItemLauncherHelper {
 	@JvmStatic
 	fun getItem(itemId: UUID, serverId: UUID?, callback: Response<BaseItemDto>) {
 		ProcessLifecycleOwner.get().lifecycleScope.launch {
-			val sessionRepository by KoinJavaComponent.inject<SessionRepository>(SessionRepository::class.java)
-			val userId = sessionRepository.currentSession.value?.userId
-			val api = resolveApiClient(serverId, userId)
+			val api = resolveApiClient(serverId)
 
 			try {
 				val response = withContext(Dispatchers.IO) {
@@ -60,9 +49,7 @@ object ItemLauncherHelper {
 	}
 	
 	suspend fun getItemBlocking(itemId: UUID, serverId: UUID? = null): BaseItemDto? {
-		val sessionRepository by KoinJavaComponent.inject<SessionRepository>(SessionRepository::class.java)
-		val userId = sessionRepository.currentSession.value?.userId
-		val api = resolveApiClient(serverId, userId)
+		val api = resolveApiClient(serverId)
 
 		return try {
 			withContext(Dispatchers.IO) {

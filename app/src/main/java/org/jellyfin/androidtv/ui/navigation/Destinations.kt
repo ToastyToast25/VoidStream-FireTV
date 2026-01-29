@@ -70,13 +70,17 @@ object Destinations {
 	)
 
 	// TODO only pass item id instead of complete JSON to browsing destinations
-	fun collectionBrowser(item: BaseItemDto) = fragmentDestination<CollectionFragment>(
+	@JvmOverloads
+	fun collectionBrowser(item: BaseItemDto, serverId: UUID? = null) = fragmentDestination<CollectionFragment>(
 		Extras.Folder to Json.Default.encodeToString(item),
+		"ServerId" to serverId?.toString(),
 	)
 
 	// TODO only pass item id instead of complete JSON to browsing destinations
-	fun folderBrowser(item: BaseItemDto) = fragmentDestination<GenericFolderFragment>(
+	@JvmOverloads
+	fun folderBrowser(item: BaseItemDto, serverId: UUID? = null) = fragmentDestination<GenericFolderFragment>(
 		Extras.Folder to Json.Default.encodeToString(item),
+		"ServerId" to serverId?.toString(),
 	)
 
 	// All genres across all libraries (new grid view)
@@ -99,11 +103,13 @@ object Destinations {
 	fun genreBrowse(
 		genreName: String,
 		parentId: UUID? = null,
-		includeType: String? = null
+		includeType: String? = null,
+		serverId: UUID? = null
 	) = fragmentDestination<GenreBrowseFragment>(
 		GenreBrowseFragment.ARG_GENRE_NAME to genreName,
 		GenreBrowseFragment.ARG_PARENT_ID to parentId?.toString(),
 		GenreBrowseFragment.ARG_INCLUDE_TYPE to includeType,
+		GenreBrowseFragment.ARG_SERVER_ID to serverId?.toString(),
 	)
 
 	// TODO only pass item id instead of complete JSON to browsing destinations
@@ -148,8 +154,10 @@ object Destinations {
 			"SeriesTimer" to Json.Default.encodeToString(seriesTimer),
 		)
 
-	fun itemList(item: UUID) = fragmentDestination<ItemListFragment>(
+	@JvmOverloads
+	fun itemList(item: UUID, serverId: UUID? = null) = fragmentDestination<ItemListFragment>(
 		"ItemId" to item.toString(),
+		"ServerId" to serverId?.toString(),
 	)
 
 	fun musicFavorites(parent: UUID) = fragmentDestination<MusicFavoritesListFragment>(

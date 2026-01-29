@@ -96,7 +96,7 @@ class MultiServerRepositoryImpl(
 
 	override suspend fun getLoggedInServers(): List<ServerUserSession> = withContext(Dispatchers.IO) {
 		val servers = serverRepository.storedServers.value
-		Timber.d("MultiServerRepository: Checking ${servers.size} stored servers for logged-in users")
+		Timber.d("MultiServerRepository: Checking ${servers.size} stored servers")
 
 		val loggedInServers = servers.mapNotNull { server ->
 			try {
@@ -135,7 +135,9 @@ class MultiServerRepositoryImpl(
 			}
 		}
 
-		// Fallback: if no stored servers found, try using the current session (single-server mode)
+		Timber.d("MultiServerRepository: Found ${loggedInServers.size} logged-in servers")
+
+		// Fallback: if no stored servers found, try using the current session
 		if (loggedInServers.isEmpty()) {
 			Timber.d("MultiServerRepository: No multi-server logins found, checking current session")
 			val currentSession = sessionRepository.currentSession.value
@@ -168,8 +170,8 @@ class MultiServerRepositoryImpl(
 
 	override suspend fun getAggregatedLibraries(includeHidden: Boolean): List<AggregatedLibrary> = withContext(Dispatchers.IO) {
 		val loggedInServers = getLoggedInServers()
-		Timber.d("MultiServerRepository: Aggregating libraries from ${loggedInServers.size} servers")
 		val hasMultipleServers = loggedInServers.size > 1
+		Timber.d("MultiServerRepository: Aggregating libraries from ${loggedInServers.size} servers")
 
 		loggedInServers.flatMap { session ->
 			try {
@@ -202,13 +204,13 @@ class MultiServerRepositoryImpl(
 					libraries
 				}
 
-				// Map to AggregatedLibrary with server context
 				filteredLibraries.map { library ->
+					val libraryName = library.name.orEmpty()
 					AggregatedLibrary(
 						library = library,
 						server = session.server,
 						userId = session.userId,
-						displayName = if (hasMultipleServers) "${library.name} (${session.server.name})" else library.name ?: ""
+						displayName = if (hasMultipleServers) "$libraryName (${session.server.name})" else libraryName
 					)
 				}
 			} catch (e: Exception) {

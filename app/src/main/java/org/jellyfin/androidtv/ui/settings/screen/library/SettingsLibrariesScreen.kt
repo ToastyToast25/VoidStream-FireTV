@@ -24,14 +24,13 @@ import org.jellyfin.androidtv.ui.settings.composable.SettingsColumn
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.CollectionType
 import org.koin.compose.koinInject
+import java.util.UUID
 
-/**
- * Wrapper to hold library info with optional server context for display
- */
 private data class LibraryDisplayItem(
 	val library: BaseItemDto,
 	val displayName: String,
-	val isMultiServer: Boolean
+	val serverId: UUID,
+	val userId: UUID
 )
 
 @Composable
@@ -53,16 +52,19 @@ fun SettingsLibrariesScreen() {
 				LibraryDisplayItem(
 					library = aggregated.library,
 					displayName = aggregated.displayName,
-					isMultiServer = true
+					serverId = aggregated.server.id,
+					userId = aggregated.userId
 				)
 			}
 		} else {
+			val session = currentSession ?: return@LaunchedEffect
 			userViewsRepository.allViews.collect { views ->
 				libraries = views.map { library ->
 					LibraryDisplayItem(
 						library = library,
 						displayName = library.name ?: "",
-						isMultiServer = false
+						serverId = session.serverId,
+						userId = session.userId
 					)
 				}
 			}
@@ -88,25 +90,23 @@ fun SettingsLibrariesScreen() {
 					onClick = { router.push(Routes.LIVETV_GUIDE_OPTIONS) }
 				)
 			} else {
-				val canOpen = allowGridView && displayPreferencesId != null && currentSession != null
+				val canOpen = allowGridView && displayPreferencesId != null
 
 				ListButton(
 					leadingContent = { Icon(painterResource(R.drawable.ic_folder), contentDescription = null) },
 					headingContent = { Text(item.displayName) },
 					enabled = canOpen,
 					onClick = {
-						currentSession?.let { session ->
-							if (canOpen) {
-								router.push(
-									Routes.LIBRARIES_DISPLAY,
-									mapOf(
-										"itemId" to item.library.id.toString(), 
-										"displayPreferencesId" to item.library.displayPreferencesId!!,
-										"serverId" to session.serverId.toString(),
-										"userId" to session.userId.toString()
-									)
+						if (canOpen) {
+							router.push(
+								Routes.LIBRARIES_DISPLAY,
+								mapOf(
+									"itemId" to item.library.id.toString(),
+									"displayPreferencesId" to item.library.displayPreferencesId!!,
+									"serverId" to item.serverId.toString(),
+									"userId" to item.userId.toString()
 								)
-							}
+							)
 						}
 					}
 				)

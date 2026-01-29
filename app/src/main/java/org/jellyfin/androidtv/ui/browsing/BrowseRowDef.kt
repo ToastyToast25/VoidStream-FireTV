@@ -15,6 +15,7 @@ import org.jellyfin.sdk.model.api.request.GetRecommendedProgramsRequest
 import org.jellyfin.sdk.model.api.request.GetRecordingsRequest
 import org.jellyfin.sdk.model.api.request.GetResumeItemsRequest
 import org.jellyfin.sdk.model.api.request.GetSimilarItemsRequest
+import java.util.UUID
 
 class BrowseRowDef {
 	var headerText: String = ""
@@ -57,6 +58,7 @@ class BrowseRowDef {
 		private set
 	var sectionType: HomeSectionType? = null
 		private set
+	var serverId: UUID? = null
 
 	@JvmOverloads
 	constructor(

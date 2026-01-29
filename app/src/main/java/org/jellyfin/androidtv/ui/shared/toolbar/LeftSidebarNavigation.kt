@@ -85,6 +85,7 @@ import org.jellyfin.androidtv.util.apiclient.primaryImage
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.CollectionType
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinActivityViewModel
 import org.koin.core.qualifier.named
@@ -503,7 +504,14 @@ private fun CollapsibleSidebarContent(
 							if (enableMultiServer && aggregatedLibraries.isNotEmpty()) {
 								val firstLib = aggregatedLibraries.first()
 								scope.launch {
-									val destination = Destinations.libraryBrowser(firstLib.library, firstLib.server.id)
+									val destination = when (firstLib.library.collectionType) {
+										CollectionType.LIVETV, CollectionType.MUSIC -> {
+											itemLauncher.getUserViewDestination(firstLib.library)
+										}
+										else -> {
+											Destinations.libraryBrowser(firstLib.library, firstLib.server.id)
+										}
+									}
 									navigationRepository.navigate(destination)
 								}
 							} else if (userViews.isNotEmpty()) {
@@ -524,7 +532,14 @@ private fun CollapsibleSidebarContent(
 									},
 									onClick = {
 										scope.launch {
-											val destination = Destinations.libraryBrowser(aggLib.library, aggLib.server.id)
+											val destination = when (aggLib.library.collectionType) {
+												CollectionType.LIVETV, CollectionType.MUSIC -> {
+													itemLauncher.getUserViewDestination(aggLib.library)
+												}
+												else -> {
+													Destinations.libraryBrowser(aggLib.library, aggLib.server.id)
+												}
+											}
 											navigationRepository.navigate(destination)
 										}
 									}

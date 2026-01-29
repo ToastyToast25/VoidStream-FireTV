@@ -50,11 +50,11 @@ fun executeQuickShuffle(
 fun executeGenreShuffle(
 	genreName: String?,
 	libraryId: UUID?,
+	serverId: UUID?,
 	userPreferences: UserPreferences,
 	navigationRepository: NavigationRepository
 ) {
 	if (genreName.isNullOrBlank()) {
-		// Fallback to quick shuffle if no genre name
 		executeQuickShuffle(userPreferences, navigationRepository)
 		return
 	}
@@ -66,7 +66,7 @@ fun executeGenreShuffle(
 	CoroutineScope(Dispatchers.Main).launch {
 		executeShuffle(
 			libraryId = libraryId,
-			serverId = null,
+			serverId = serverId,
 			genreName = genreName,
 			contentType = shuffleContentType,
 			libraryCollectionType = null,
@@ -102,7 +102,7 @@ suspend fun executeShuffle(
 			apiClientFactory.getApiClientForServer(serverId) ?: api
 		} else api
 		val randomItem = withContext(Dispatchers.IO) {
-			Timber.d("Shuffle search: genreName='$genreName', includeTypes=$includeTypes, libraryId=$libraryId")
+			Timber.d("Shuffle search: genreName='$genreName', includeTypes=$includeTypes, libraryId=$libraryId, serverId=$serverId")
 			val response = targetApi.itemsApi.getItems(
 				parentId = libraryId,
 				genres = genreName?.let { setOf(it) },
@@ -117,8 +117,8 @@ suspend fun executeShuffle(
 			items?.firstOrNull()
 		}
 		if (randomItem != null) {
-			Timber.d("Found random item: ${randomItem.name} (${randomItem.type})")
-			navigationRepository.navigate(Destinations.itemDetails(randomItem.id))
+			Timber.d("Found random item: ${randomItem.name} (${randomItem.type}), navigating with serverId=$serverId")
+			navigationRepository.navigate(Destinations.itemDetails(randomItem.id, serverId))
 		} else {
 			Timber.w("No random item found for genre='$genreName', types=$includeTypes")
 		}

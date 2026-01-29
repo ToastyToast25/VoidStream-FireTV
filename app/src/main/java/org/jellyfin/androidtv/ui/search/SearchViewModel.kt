@@ -14,9 +14,9 @@ import org.jellyfin.androidtv.data.repository.JellyseerrRepository
 import org.jellyfin.androidtv.data.repository.ParentalControlsRepository
 import org.jellyfin.androidtv.data.service.jellyseerr.toBaseItemDto
 import org.jellyfin.androidtv.preference.JellyseerrPreferences
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.util.ErrorHandler
 import org.jellyfin.sdk.model.api.BaseItemKind
-import timber.log.Timber
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -25,6 +25,7 @@ class SearchViewModel(
 	private val jellyseerrRepository: JellyseerrRepository,
 	private val jellyseerrPreferences: JellyseerrPreferences,
 	private val parentalControlsRepository: ParentalControlsRepository,
+	private val userPreferences: UserPreferences,
 ) : ViewModel() {
 	companion object {
 		private val debounceDuration = 600.milliseconds
@@ -71,11 +72,16 @@ class SearchViewModel(
 		searchJob = viewModelScope.launch {
 			delay(debounce)
 
+			val enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
+
 			val jellyfinResults = groups.map { (stringRes, itemKinds) ->
 				async {
-					val result = searchRepository.search(trimmed, itemKinds)
+					val result = if (enableMultiServer) {
+						searchRepository.searchMultiServer(trimmed, itemKinds)
+					} else {
+						searchRepository.search(trimmed, itemKinds)
+					}
 					val items = result.getOrNull().orEmpty()
-					// Apply parental controls filtering
 					val filteredItems = items.filter { item ->
 						!parentalControlsRepository.shouldFilterItem(item)
 					}
@@ -83,13 +89,11 @@ class SearchViewModel(
 				}
 			}.awaitAll()
 
-		// Add Jellyseerr results if enabled (displayed last)
 		val allResults = if (jellyseerrPreferences[JellyseerrPreferences.enabled]) {
 			val jellyseerrResult = ErrorHandler.catchingWarning("search Jellyseerr") {
 				jellyseerrRepository.search(trimmed)
 			}
 			val jellyseerrItems = jellyseerrResult.getOrNull()?.getOrNull()?.results?.map { it.toBaseItemDto() } ?: emptyList()
-			// Apply parental controls filtering to Jellyseerr results
 			val filteredJellyseerrItems = jellyseerrItems.filter { item ->
 				!parentalControlsRepository.shouldFilterItem(item)
 			}

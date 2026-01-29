@@ -168,14 +168,14 @@ val appModule = module {
 	single<ItemMutationRepository> { ItemMutationRepositoryImpl(get(), get()) }
 	single<CustomMessageRepository> { CustomMessageRepositoryImpl() }
 	single<NavigationRepository> { NavigationRepositoryImpl(Destinations.home) }
-	single<SearchRepository> { SearchRepositoryImpl(get()) }
+	single<SearchRepository> { SearchRepositoryImpl(get(), get()) }
 	single<MediaSegmentRepository> { MediaSegmentRepositoryImpl(get(), get()) }
 	single<ExternalAppRepository> { ExternalAppRepository(get()) }
 	single { LocalWatchlistRepository(androidContext()) }
 	single<org.jellyfin.androidtv.data.repository.MultiServerRepository> { 
 		org.jellyfin.androidtv.data.repository.MultiServerRepositoryImpl(get(), get(), get(), get(), get(defaultDeviceInfo), get(), get()) 
 	}
-	single { org.jellyfin.androidtv.util.sdk.ApiClientFactory(get(), get(), get(defaultDeviceInfo), get<org.jellyfin.androidtv.auth.repository.SessionRepository>()) }
+	single { org.jellyfin.androidtv.util.sdk.ApiClientFactory(get(), get(), get(defaultDeviceInfo)) }
 	single<org.jellyfin.androidtv.data.repository.ParentalControlsRepository> {
 		org.jellyfin.androidtv.data.repository.ParentalControlsRepositoryImpl(androidContext(), get(), get())
 	}
@@ -194,12 +194,12 @@ val appModule = module {
 	viewModel { NextUpViewModel(get(), get(), get()) }
 	viewModel { StillWatchingViewModel(get(), get(), get(), get()) }
 	viewModel { PhotoPlayerViewModel(get()) }
-	viewModel { SearchViewModel(get(), get(), get(named("global")), get()) }
+	viewModel { SearchViewModel(get(), get(), get(named("global")), get(), get()) }
 	viewModel { DreamViewModel(get(), get(), get(), get(), get()) }
 	viewModel { SettingsViewModel() }
 	viewModel { SyncPlayViewModel() }
 	viewModel { org.jellyfin.androidtv.ui.jellyseerr.JellyseerrViewModel(get(), get(named("global"))) }
-	single { MediaBarSlideshowViewModel(get(), get(), get(), get(), androidContext(), get(), get(), get()) } // Singleton so both fragments share the same instance
+	single { MediaBarSlideshowViewModel(get(), get(), get(), get(), androidContext(), get(), get(), get(), get()) }
 
 	// SyncPlay
 	single { SyncPlayManager(androidContext(), get(), get()) }
@@ -211,7 +211,7 @@ val appModule = module {
 	single { ItemLauncher() }
 	single { KeyProcessor() }
 	single { ReportingHelper(get(), get(), get(), get()) }
-	single<PlaybackHelper> { SdkPlaybackHelper(get(), get(), get(), get(), get(), get()) }
+	single<PlaybackHelper> { SdkPlaybackHelper(get(), get(), get(), get(), get()) }
 	single { org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer(androidContext()) }
 
 	factory { (context: Context) -> 

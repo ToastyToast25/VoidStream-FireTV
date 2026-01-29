@@ -9,7 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
-import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.data.repository.ItemRepository
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.playback.PlaybackControllerContainer
@@ -38,7 +37,6 @@ import kotlin.time.Duration.Companion.seconds
 class SdkPlaybackHelper(
 	private val api: ApiClient,
 	private val apiClientFactory: ApiClientFactory,
-	private val sessionRepository: SessionRepository,
 	private val userPreferences: UserPreferences,
 	private val playbackLauncher: PlaybackLauncher,
 	private val playbackControllerContainer: PlaybackControllerContainer,
@@ -46,22 +44,10 @@ class SdkPlaybackHelper(
 	companion object {
 		const val ITEM_QUERY_LIMIT = 150
 	}
-	
-	/**
-	 * Get the correct API client for an item, using the current user's context.
-	 * Critical for multi-user scenarios where multiple users are logged into the same server.
-	 */
+
 	private fun getApiClientForItem(item: BaseItemDto): ApiClient {
 		val serverId = UUIDUtils.parseUUID(item.serverId)
-		val currentSession = sessionRepository.currentSession.value
-		val userId = currentSession?.userId
-		
-		return if (serverId != null && userId != null) {
-			apiClientFactory.getApiClient(serverId, userId) ?: run {
-				Timber.w("Failed to create API client for server $serverId user $userId, using fallback")
-				api
-			}
-		} else if (serverId != null) {
+		return if (serverId != null) {
 			apiClientFactory.getApiClientForServer(serverId) ?: api
 		} else {
 			api
@@ -98,6 +84,11 @@ class SdkPlaybackHelper(
 		shuffle: Boolean,
 	): List<BaseItemDto> = withContext(Dispatchers.IO) {
 		val itemApi = getApiClientForItem(mainItem)
+		val serverId = mainItem.serverId
+		
+		fun List<BaseItemDto>.withServerIdPropagated(): List<BaseItemDto> =
+			if (serverId != null) map { it.copy(serverId = serverId) } else this
+		
 		when (mainItem.type) {
 			BaseItemKind.EPISODE -> {
 				val seriesId = mainItem.seriesId
@@ -110,7 +101,7 @@ class SdkPlaybackHelper(
 						fields = ItemRepository.itemFields
 					)
 
-					response.items
+					response.items.withServerIdPropagated()
 				} else {
 					listOf(mainItem)
 				}
@@ -124,7 +115,7 @@ class SdkPlaybackHelper(
 					limit = ITEM_QUERY_LIMIT,
 					fields = ItemRepository.itemFields,
 				)
-				response.items
+				response.items.withServerIdPropagated()
 			}
 
 			BaseItemKind.SEASON -> {
@@ -136,7 +127,7 @@ class SdkPlaybackHelper(
 					limit = ITEM_QUERY_LIMIT,
 					fields = ItemRepository.itemFields,
 				)
-				response.items
+				response.items.withServerIdPropagated()
 			}
 
 			BaseItemKind.FOLDER -> {
@@ -154,7 +145,7 @@ class SdkPlaybackHelper(
 					fields = ItemRepository.itemFields
 				)
 
-				response.items
+				response.items.withServerIdPropagated()
 			}
 
 			BaseItemKind.BOX_SET -> {
@@ -172,7 +163,7 @@ class SdkPlaybackHelper(
 					fields = ItemRepository.itemFields
 				)
 
-				response.items
+				response.items.withServerIdPropagated()
 			}
 
 			BaseItemKind.MUSIC_ALBUM -> {
@@ -192,7 +183,7 @@ class SdkPlaybackHelper(
 					albumIds = listOf(mainItem.id)
 				)
 
-				response.items
+				response.items.withServerIdPropagated()
 			}
 
 			BaseItemKind.MUSIC_ARTIST -> {
@@ -212,7 +203,7 @@ class SdkPlaybackHelper(
 					artistIds = listOf(mainItem.id)
 				)
 
-				response.items
+				response.items.withServerIdPropagated()
 			}
 
 			BaseItemKind.PLAYLIST -> {
@@ -225,13 +216,14 @@ class SdkPlaybackHelper(
 					fields = ItemRepository.itemFields
 				)
 
-				response.items
+				response.items.withServerIdPropagated()
 			}
 
 			BaseItemKind.PROGRAM -> {
 				val parentId = requireNotNull(mainItem.parentId)
 				val channel by itemApi.userLibraryApi.getItem(parentId)
 				val channelWithProgramMetadata = channel.copy(
+					serverId = serverId,
 					premiereDate = mainItem.premiereDate,
 					endDate = mainItem.endDate,
 					officialRating = mainItem.officialRating,
@@ -246,6 +238,7 @@ class SdkPlaybackHelper(
 				val currentProgram = channel.currentProgram
 				if (currentProgram != null) {
 					val channelWithCurrentProgramMetadata = channel.copy(
+						serverId = serverId,
 						premiereDate = currentProgram.premiereDate,
 						endDate = currentProgram.endDate,
 						officialRating = currentProgram.officialRating,
@@ -253,7 +246,7 @@ class SdkPlaybackHelper(
 					)
 					listOf(channelWithCurrentProgramMetadata)
 				} else {
-					listOf(channel)
+					listOf(if (serverId != null) channel.copy(serverId = serverId) else channel)
 				}
 			}
 
@@ -264,8 +257,7 @@ class SdkPlaybackHelper(
 				if (addIntros) {
 					val intros = runCatching { itemApi.userLibraryApi.getIntros(mainItem.id).content.items }.getOrNull()
 						.orEmpty()
-						// Force the type to be trailer as the legacy playback UI uses it to determine if it should show the next up screen
-						.map { it.copy(type = BaseItemKind.TRAILER) }
+						.map { it.copy(type = BaseItemKind.TRAILER, serverId = serverId) }
 
 					intros + parts
 				} else {
@@ -281,8 +273,13 @@ class SdkPlaybackHelper(
 		val partCount = item.partCount
 		if (partCount != null && partCount > 1) {
 			val itemApi = getApiClientForItem(item)
+			val serverId = item.serverId
 			val response by itemApi.videosApi.getAdditionalPart(item.id)
-			addAll(response.items)
+			if (serverId != null) {
+				addAll(response.items.map { it.copy(serverId = serverId) })
+			} else {
+				addAll(response.items)
+			}
 		}
 	}
 
@@ -344,6 +341,7 @@ class SdkPlaybackHelper(
 	override fun playInstantMix(context: Context, item: BaseItemDto) {
 		getScope(context).launch {
 			val itemApi = getApiClientForItem(item)
+			val serverId = item.serverId
 			val response = withContext(Dispatchers.IO) {
 				itemApi.instantMixApi.getInstantMixFromItem(
 					itemId = item.id,
@@ -351,7 +349,11 @@ class SdkPlaybackHelper(
 				).content
 			}
 
-			val items = response.items
+			val items = if (serverId != null) {
+				response.items.map { it.copy(serverId = serverId) }
+			} else {
+				response.items
+			}
 			if (items.isNotEmpty()) {
 				playbackLauncher.launch(context, items)
 			} else {

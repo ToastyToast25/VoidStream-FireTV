@@ -76,20 +76,12 @@ public class ItemLauncher {
 
     public void launch(final BaseRowItem rowItem, MutableObjectAdapter<Object> adapter, final Context context) {
         UUID serverId = null;
-        Timber.d("ItemLauncher: rowItem type is %s", rowItem.getClass().getSimpleName());
         if (rowItem instanceof AggregatedItemBaseRowItem) {
             serverId = ((AggregatedItemBaseRowItem) rowItem).getServer().getId();
-            Timber.d("ItemLauncher: Item is from server %s", serverId);
         } else {
             BaseItemDto item = rowItem.getBaseItem();
             if (item != null && item.getServerId() != null) {
-                Timber.d("ItemLauncher: Item has serverId=%s from BaseItemDto", item.getServerId());
                 serverId = UUIDUtils.parseUUID(item.getServerId());
-                if (serverId != null) {
-                    Timber.d("ItemLauncher: Parsed serverId to %s", serverId);
-                }
-            } else {
-                Timber.d("ItemLauncher: Item has no serverId, using default server");
             }
         }
         
@@ -116,17 +108,16 @@ public class ItemLauncher {
                         launchUserView(baseItem);
                         return;
                     case FOLDER:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.folderBrowser(baseItem));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.folderBrowser(baseItem, serverId));
                         return;
                     case SERIES:
                     case MUSIC_ARTIST:
-                        // Pass serverId for aggregated items
                         navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(baseItem.getId(), serverId));
                         return;
 
                     case MUSIC_ALBUM:
                     case PLAYLIST:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemList(baseItem.getId()));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemList(baseItem.getId(), serverId));
                         return;
 
                     case AUDIO:
@@ -155,11 +146,11 @@ public class ItemLauncher {
 
                         return;
                     case SEASON:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.folderBrowser(baseItem));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.folderBrowser(baseItem, serverId));
                         return;
 
                     case BOX_SET:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.collectionBrowser(baseItem));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.collectionBrowser(baseItem, serverId));
                         return;
 
                     case PHOTO:
@@ -320,7 +311,7 @@ public class ItemLauncher {
                 switch (rowItem.getSelectAction()) {
 
                     case ShowDetails:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(rowItem.getBaseItem().getId()));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.itemDetails(rowItem.getBaseItem().getId(), serverId));
                         break;
                     case Play:
                         //Just play it directly but need to retrieve as base item

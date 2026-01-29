@@ -23,9 +23,11 @@ import kotlinx.coroutines.withContext
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.constant.Extras
 import org.jellyfin.androidtv.data.repository.ItemRepository
+import org.jellyfin.androidtv.data.repository.MultiServerRepository
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
-import org.jellyfin.androidtv.util.apiclient.ioCallContent
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.genresApi
 import org.jellyfin.sdk.api.client.extensions.imageApi
@@ -59,6 +61,9 @@ enum class GenreSortOption(val labelResId: Int, val sortBy: ItemSortBy?) {
 class GenresGridFragment : Fragment() {
 	private val apiClient by inject<ApiClient>()
 	private val navigationRepository by inject<NavigationRepository>()
+	private val multiServerRepository by inject<MultiServerRepository>()
+	private val userPreferences by inject<UserPreferences>()
+	private val apiClientFactory by inject<ApiClientFactory>()
 
 	private var loadingIndicator: ProgressBar? = null
 	private var emptyText: TextView? = null
@@ -235,14 +240,100 @@ class GenresGridFragment : Fragment() {
 		lifecycleScope.launch {
 			showLoading(true)
 			
-			loadUserLibraries()
-			loadGenres()
+			val enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
+			
+			if (enableMultiServer && selectedLibraryId == null) {
+				loadMultiServerGenres()
+			} else {
+				loadUserLibraries()
+				loadGenres()
+			}
+		}
+	}
+
+	private suspend fun loadMultiServerGenres() {
+		try {
+			val sessions = multiServerRepository.getLoggedInServers()
+			Timber.d("GenresGridFragment: Loading genres from ${sessions.size} servers")
+			
+			if (sessions.isEmpty()) {
+				loadUserLibraries()
+				loadGenres()
+				return
+			}
+			
+			// Load user libraries from all servers for the filter menu
+			userLibraries.clear()
+			sessions.forEach { session ->
+				try {
+					val views = withContext(Dispatchers.IO) {
+						session.apiClient.userViewsApi.getUserViews().content
+					}
+					views.items
+						.filter { it.collectionType in listOf(CollectionType.MOVIES, CollectionType.TVSHOWS) }
+						.forEach { userLibraries.add(it) }
+				} catch (e: Exception) {
+					Timber.e(e, "Failed to load libraries from server ${session.server.name}")
+				}
+			}
+			
+			allGenres.clear()
+			
+			// Load genres from all servers in parallel
+			val allServerGenres = coroutineScope {
+				sessions.map { session ->
+					async(Dispatchers.IO) {
+						try {
+							val genresResponse = session.apiClient.genresApi.getGenres(
+								sortBy = setOf(ItemSortBy.SORT_NAME),
+							).content
+							
+							genresResponse.items.map { genre ->
+								async(Dispatchers.IO) {
+									createGenreItem(genre, session.apiClient, session.server.id)
+								}
+							}.awaitAll().filterNotNull()
+						} catch (e: Exception) {
+							Timber.e(e, "Failed to load genres from server ${session.server.name}")
+							emptyList()
+						}
+					}
+				}.awaitAll().flatten()
+			}
+			
+			// Merge genres with the same name - combine item counts
+			val mergedGenres = allServerGenres
+				.groupBy { it.name.lowercase() }
+				.map { (_, genres) ->
+					if (genres.size == 1) {
+						genres.first()
+					} else {
+						// Merge: use first genre's data but sum item counts
+						val first = genres.first()
+						first.copy(
+							itemCount = genres.sumOf { it.itemCount },
+							serverId = null // Multi-server genre, no single server
+						)
+					}
+				}
+			
+			allGenres.addAll(mergedGenres)
+			Timber.d("GenresGridFragment: Loaded ${allGenres.size} unique genres from all servers")
+			
+			applySortAndFilter()
+			
+		} catch (e: Exception) {
+			Timber.e(e, "Failed to load multi-server genres")
+			showLoading(false)
+			showEmpty(true)
 		}
 	}
 
 	private suspend fun loadUserLibraries() {
 		try {
-			val response = apiClient.ioCallContent { userViewsApi.getUserViews() }
+			val response = withContext(Dispatchers.IO) {
+				apiClient.userViewsApi.getUserViews().content
+			}
 			userLibraries.clear()
 			
 			// Only include video libraries (movies and TV shows)
@@ -262,12 +353,10 @@ class GenresGridFragment : Fragment() {
 			
 			try {
 				val genresResponse = withContext(Dispatchers.IO) {
-					apiClient.ioCallContent {
-						genresApi.getGenres(
-							parentId = selectedLibraryId,
-							sortBy = setOf(ItemSortBy.SORT_NAME),
-						)
-					}
+					apiClient.genresApi.getGenres(
+						parentId = selectedLibraryId,
+						sortBy = setOf(ItemSortBy.SORT_NAME),
+					).content
 				}
 
 				allGenres.clear()
@@ -275,7 +364,7 @@ class GenresGridFragment : Fragment() {
 				val genreItems = coroutineScope {
 					genresResponse.items.map { genre ->
 						async(Dispatchers.IO) {
-							createGenreItem(genre)
+							createGenreItem(genre, apiClient, null)
 						}
 					}.awaitAll().filterNotNull()
 				}
@@ -300,21 +389,19 @@ class GenresGridFragment : Fragment() {
 	 * Uses a single API call to get both count and backdrop image.
 	 * Note: This should be called from a coroutine context (IO dispatcher).
 	 */
-	private suspend fun createGenreItem(genre: BaseItemDto): JellyfinGenreItem? {
+	private suspend fun createGenreItem(genre: BaseItemDto, client: ApiClient, serverId: UUID?): JellyfinGenreItem? {
 		return try {
-			val itemsResponse = apiClient.ioCallContent {
-				itemsApi.getItems(
-					parentId = selectedLibraryId,
-					genres = setOf(genre.name.orEmpty()),
-					includeItemTypes = setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
-					recursive = true,
-					sortBy = setOf(ItemSortBy.RANDOM),
-					limit = 1,
-					imageTypes = setOf(ImageType.BACKDROP),
-					enableTotalRecordCount = true,
-					fields = ItemRepository.itemFields,
-				)
-			}
+			val itemsResponse = client.itemsApi.getItems(
+				parentId = selectedLibraryId,
+				genres = setOf(genre.name.orEmpty()),
+				includeItemTypes = setOf(BaseItemKind.MOVIE, BaseItemKind.SERIES),
+				recursive = true,
+				sortBy = setOf(ItemSortBy.RANDOM),
+				limit = 1,
+				imageTypes = setOf(ImageType.BACKDROP),
+				enableTotalRecordCount = true,
+				fields = ItemRepository.itemFields,
+			).content
 
 			val itemCount = itemsResponse.totalRecordCount ?: 0
 			
@@ -324,7 +411,7 @@ class GenresGridFragment : Fragment() {
 
 			val backdropUrl = itemsResponse.items.firstOrNull()?.let { item ->
 				if (!item.backdropImageTags.isNullOrEmpty()) {
-					apiClient.imageApi.getItemImageUrl(
+					client.imageApi.getItemImageUrl(
 						itemId = item.id,
 						imageType = ImageType.BACKDROP,
 						tag = item.backdropImageTags!!.first(),
@@ -340,6 +427,7 @@ class GenresGridFragment : Fragment() {
 				backdropUrl = backdropUrl,
 				itemCount = itemCount,
 				parentId = selectedLibraryId,
+				serverId = serverId,
 			)
 		} catch (e: Exception) {
 			Timber.w(e, "Failed to get info for genre ${genre.name}")
@@ -383,7 +471,8 @@ class GenresGridFragment : Fragment() {
 			Destinations.genreBrowse(
 				genreName = genre.name,
 				parentId = genre.parentId,
-				includeType = includeType
+				includeType = includeType,
+				serverId = genre.serverId
 			)
 		)
 	}

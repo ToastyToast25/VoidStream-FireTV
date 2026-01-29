@@ -7,16 +7,17 @@ import java.util.UUID
 
 /**
  * Server model to use locally in place of ServerInfo model in ApiClient.
+ * All properties are immutable to prevent accidental state sharing between server instances.
  */
 data class Server(
-	var id: UUID,
-	var name: String,
-	var address: String,
+	val id: UUID,
+	val name: String,
+	val address: String,
 	val version: String? = null,
 	val loginDisclaimer: String? = null,
 	val splashscreenEnabled: Boolean = false,
 	val setupCompleted: Boolean = true,
-	var dateLastAccessed: Instant = Instant.MIN,
+	val dateLastAccessed: Instant = Instant.MIN,
 ) {
 	val serverVersion = version?.let(ServerVersion::fromString)
 	val versionSupported = serverVersion != null && serverVersion >= ServerRepository.minimumServerVersion

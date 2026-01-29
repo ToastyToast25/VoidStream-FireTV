@@ -41,6 +41,7 @@ import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.sdk.model.api.BaseItemDto
+import org.jellyfin.sdk.model.api.CollectionType
 import java.util.UUID
 
 /**
@@ -116,7 +117,14 @@ fun ExpandableLibrariesButton(
 									onClick = {
 										if (!isActiveLibrary) {
 											scope.launch {
-												val destination = Destinations.libraryBrowser(aggLib.library, aggLib.server.id)
+												val destination = when (aggLib.library.collectionType) {
+													CollectionType.LIVETV, CollectionType.MUSIC -> {
+														itemLauncher.getUserViewDestination(aggLib.library)
+													}
+													else -> {
+														Destinations.libraryBrowser(aggLib.library, aggLib.server.id)
+													}
+												}
 												navigationRepository.navigate(destination)
 											}
 										}

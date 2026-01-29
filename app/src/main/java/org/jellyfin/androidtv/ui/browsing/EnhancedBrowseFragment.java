@@ -165,6 +165,12 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
         mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), getArguments().getString(Extras.Folder));
         if (mFolder == null) return;
 
+        // Apply ServerId from navigation argument if present and folder doesn't have one
+        String serverIdArg = getArguments().getString("ServerId");
+        if (serverIdArg != null && (mFolder.getServerId() == null || mFolder.getServerId().isEmpty())) {
+            mFolder = JavaCompat.copyWithServerId(mFolder, serverIdArg);
+        }
+
         if (mFolder.getCollectionType() != null) {
             switch (mFolder.getCollectionType()) {
                 case MOVIES:
@@ -283,9 +289,14 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
                     break;
             }
 
-            rowAdapter.setApiClient(folderApiClient);
-            if (folderServerId != null) {
-                rowAdapter.setServerId(folderServerId);
+            if (def.getServerId() != null) {
+                rowAdapter.setApiClient(apiClientFactory.getValue().getApiClientForServer(def.getServerId()));
+                rowAdapter.setServerId(def.getServerId().toString());
+            } else {
+                rowAdapter.setApiClient(folderApiClient);
+                if (folderServerId != null) {
+                    rowAdapter.setServerId(folderServerId);
+                }
             }
 
             rowAdapter.setReRetrieveTriggers(def.getChangeTriggers());

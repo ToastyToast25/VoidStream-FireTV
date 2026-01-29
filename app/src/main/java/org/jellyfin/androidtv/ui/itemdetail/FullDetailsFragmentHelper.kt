@@ -44,46 +44,19 @@ import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-/**
- * Helper function to get the correct API client for a fragment.
- * This ensures we use the current session's userId, which is critical for
- * multi-user scenarios on the same server.
- */
 private fun FullDetailsFragment.getCorrectApiClient(): ApiClient {
 	val api by inject<ApiClient>()
 	val apiClientFactory by inject<org.jellyfin.androidtv.util.sdk.ApiClientFactory>()
 	val sessionRepository by inject<org.jellyfin.androidtv.auth.repository.SessionRepository>()
 	
-	// Check if a specific serverId was provided (for multi-server items)
 	val serverIdString: String? = arguments?.getString("ServerId")
-	var serverId = Utils.uuidOrNull(serverIdString)
-	
-	// Get current session for fallback and to get the current userId
+	val serverId = Utils.uuidOrNull(serverIdString)
 	val currentSession = sessionRepository.currentSession.value
 	
-	// If no serverId was provided, use the current session's serverId
-	if (serverId == null) {
-		serverId = currentSession?.serverId
-	}
-	
-	// Get the userId - critical for multi-user scenarios on the same server
-	val userId = currentSession?.userId
-	
-	return if (serverId != null && userId != null) {
-		// Use API client for the specific server AND user
-		apiClientFactory.getApiClient(serverId, userId) ?: run {
-			Timber.w("Failed to create API client for server $serverId user $userId, using current session")
-			api
-		}
-	} else if (serverId != null) {
-		// Fallback to server-only (picks first user - not ideal but better than nothing)
-		apiClientFactory.getApiClientForServer(serverId) ?: run {
-			Timber.w("Failed to create API client for server $serverId, using current session")
-			api
-		}
-	} else {
-		// Fallback to injected API client
-		api
+	return when {
+		serverId != null -> apiClientFactory.getApiClientForServer(serverId) ?: api
+		currentSession != null -> apiClientFactory.getApiClientForServer(currentSession.serverId) ?: api
+		else -> api
 	}
 }
 
@@ -241,8 +214,6 @@ fun FullDetailsFragment.playTrailers() {
 fun FullDetailsFragment.getItem(id: UUID, callback: (item: BaseItemDto?) -> Unit) {
 	val sessionRepository by inject<org.jellyfin.androidtv.auth.repository.SessionRepository>()
 	val apiToUse = getCorrectApiClient()
-	
-	// Get current serverId for annotating response
 	val serverIdString: String? = arguments?.getString("ServerId")
 	val serverId = Utils.uuidOrNull(serverIdString) ?: sessionRepository.currentSession.value?.serverId
 
@@ -256,8 +227,6 @@ fun FullDetailsFragment.getItem(id: UUID, callback: (item: BaseItemDto?) -> Unit
 			null
 		}
 
-		// If we fetched from a specific server, annotate the item with that serverId
-		// so image loaders and other components know which server to use
 		if (response != null && serverId != null) {
 			response = response.copyWithServerId(serverId.toString())
 		}

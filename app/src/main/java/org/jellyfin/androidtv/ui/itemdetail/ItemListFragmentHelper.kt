@@ -4,8 +4,11 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.data.repository.ItemMutationRepository
 import org.jellyfin.androidtv.data.repository.ItemRepository
+import org.jellyfin.androidtv.util.Utils
+import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.playlistsApi
@@ -16,8 +19,24 @@ import org.jellyfin.sdk.model.api.ItemSortBy
 import org.koin.android.ext.android.inject
 import java.util.UUID
 
-fun ItemListFragment.loadItem(itemId: UUID) {
+private fun ItemListFragment.getCorrectApiClient(): ApiClient {
 	val api by inject<ApiClient>()
+	val apiClientFactory by inject<ApiClientFactory>()
+	val sessionRepository by inject<SessionRepository>()
+
+	val serverIdString = arguments?.getString("ServerId")
+	val serverId = Utils.uuidOrNull(serverIdString)
+	val currentSession = sessionRepository.currentSession.value
+
+	return when {
+		serverId != null -> apiClientFactory.getApiClientForServer(serverId) ?: api
+		currentSession != null -> apiClientFactory.getApiClientForServer(currentSession.serverId) ?: api
+		else -> api
+	}
+}
+
+fun ItemListFragment.loadItem(itemId: UUID) {
+	val api = getCorrectApiClient()
 
 	lifecycleScope.launch {
 		val item = withContext(Dispatchers.IO) {
@@ -54,7 +73,7 @@ fun ItemListFragment.getPlaylist(
 	item: BaseItemDto,
 	callback: (items: List<BaseItemDto>) -> Unit
 ) {
-	val api by inject<ApiClient>()
+	val api = getCorrectApiClient()
 
 	lifecycleScope.launch {
 		val result = withContext(Dispatchers.IO) {
@@ -97,7 +116,7 @@ fun ItemListFragment.removeFromPlaylist(
 	playlistItemId: String,
 	callback: () -> Unit
 ) {
-	val api by inject<ApiClient>()
+	val api = getCorrectApiClient()
 
 	lifecycleScope.launch {
 		try {
@@ -120,7 +139,7 @@ fun ItemListFragment.movePlaylistItem(
 	newIndex: Int,
 	callback: () -> Unit
 ) {
-	val api by inject<ApiClient>()
+	val api = getCorrectApiClient()
 
 	lifecycleScope.launch {
 		try {
