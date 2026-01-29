@@ -122,7 +122,7 @@ fun ExpandableLibrariesButton(
 														itemLauncher.getUserViewDestination(aggLib.library)
 													}
 													else -> {
-														Destinations.libraryBrowser(aggLib.library, aggLib.server.id)
+														Destinations.libraryBrowser(aggLib.library, aggLib.server.id, aggLib.userId)
 													}
 												}
 												navigationRepository.navigate(destination)

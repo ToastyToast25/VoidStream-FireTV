@@ -101,6 +101,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
     private BaseItemDto mFolder;
     private LibraryPreferences libraryPreferences;
     private UUID mServerId = null;
+    private UUID mUserId = null;
 
     private HorizontalGridBrowseBinding binding;
     private ItemRowAdapter mAdapter;
@@ -150,6 +151,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         mFolder = Json.Default.decodeFromString(BaseItemDto.Companion.serializer(), getArguments().getString(Extras.Folder));
         mParentId = mFolder.getId();
         mServerId = Utils.uuidOrNull(getArguments().getString("ServerId"));
+        mUserId = Utils.uuidOrNull(getArguments().getString("UserId"));
         mainTitle = mFolder.getName();
         libraryPreferences = preferencesRepository.getValue().getLibraryPreferences(Objects.requireNonNull(mFolder.getDisplayPreferencesId()), api.getValue());
         mPosterSizeSetting = libraryPreferences.get(LibraryPreferences.Companion.getPosterSize());
@@ -661,9 +663,13 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
 
         // If browsing a library from another server, use that server's API client
         if (mServerId != null) {
-            // Get current user ID from session for multi-user support
-            org.jellyfin.androidtv.auth.repository.Session currentSession = sessionRepository.getValue().getCurrentSession().getValue();
-            UUID userId = (currentSession != null) ? currentSession.getUserId() : null;
+            // Use the userId passed for this server (from AggregatedLibrary)
+            // Fall back to current session's userId if not provided
+            UUID userId = mUserId;
+            if (userId == null) {
+                org.jellyfin.androidtv.auth.repository.Session currentSession = sessionRepository.getValue().getCurrentSession().getValue();
+                userId = (currentSession != null) ? currentSession.getUserId() : null;
+            }
             
             ApiClient serverApiClient = (userId != null) 
                 ? apiClientFactory.getValue().getApiClient(mServerId, userId)

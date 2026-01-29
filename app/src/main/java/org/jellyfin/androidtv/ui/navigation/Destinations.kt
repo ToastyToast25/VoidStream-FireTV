@@ -51,9 +51,10 @@ object Destinations {
 	// Browsing
 	// TODO only pass item id instead of complete JSON to browsing destinations
 	@JvmOverloads
-	fun libraryBrowser(item: BaseItemDto, serverId: UUID? = null) = fragmentDestination<BrowseGridFragment>(
+	fun libraryBrowser(item: BaseItemDto, serverId: UUID? = null, userId: UUID? = null) = fragmentDestination<BrowseGridFragment>(
 		Extras.Folder to Json.Default.encodeToString(item),
 		"ServerId" to serverId?.toString(),
+		"UserId" to userId?.toString(),
 	)
 
 	// TODO only pass item id instead of complete JSON to browsing destinations
@@ -71,16 +72,18 @@ object Destinations {
 
 	// TODO only pass item id instead of complete JSON to browsing destinations
 	@JvmOverloads
-	fun collectionBrowser(item: BaseItemDto, serverId: UUID? = null) = fragmentDestination<CollectionFragment>(
+	fun collectionBrowser(item: BaseItemDto, serverId: UUID? = null, userId: UUID? = null) = fragmentDestination<CollectionFragment>(
 		Extras.Folder to Json.Default.encodeToString(item),
 		"ServerId" to serverId?.toString(),
+		"UserId" to userId?.toString(),
 	)
 
 	// TODO only pass item id instead of complete JSON to browsing destinations
 	@JvmOverloads
-	fun folderBrowser(item: BaseItemDto, serverId: UUID? = null) = fragmentDestination<GenericFolderFragment>(
+	fun folderBrowser(item: BaseItemDto, serverId: UUID? = null, userId: UUID? = null) = fragmentDestination<GenericFolderFragment>(
 		Extras.Folder to Json.Default.encodeToString(item),
 		"ServerId" to serverId?.toString(),
+		"UserId" to userId?.toString(),
 	)
 
 	// All genres across all libraries (new grid view)

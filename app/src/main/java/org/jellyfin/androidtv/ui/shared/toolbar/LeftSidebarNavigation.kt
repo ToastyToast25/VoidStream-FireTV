@@ -501,6 +501,7 @@ private fun CollapsibleSidebarContent(
 							librariesHasFocus = hasFocus
 						},
 						onClick = {
+							// Always navigate to first library when clicking Libraries button
 							if (enableMultiServer && aggregatedLibraries.isNotEmpty()) {
 								val firstLib = aggregatedLibraries.first()
 								scope.launch {
@@ -509,7 +510,7 @@ private fun CollapsibleSidebarContent(
 											itemLauncher.getUserViewDestination(firstLib.library)
 										}
 										else -> {
-											Destinations.libraryBrowser(firstLib.library, firstLib.server.id)
+											Destinations.libraryBrowser(firstLib.library, firstLib.server.id, firstLib.userId)
 										}
 									}
 									navigationRepository.navigate(destination)
@@ -537,7 +538,7 @@ private fun CollapsibleSidebarContent(
 													itemLauncher.getUserViewDestination(aggLib.library)
 												}
 												else -> {
-													Destinations.libraryBrowser(aggLib.library, aggLib.server.id)
+													Destinations.libraryBrowser(aggLib.library, aggLib.server.id, aggLib.userId)
 												}
 											}
 											navigationRepository.navigate(destination)
@@ -745,6 +746,20 @@ private fun SidebarTextItem(
 	Row(
 		modifier = Modifier
 			.focusable(interactionSource = interactionSource)
+			.onKeyEvent { keyEvent ->
+				if (keyEvent.key == Key.DirectionCenter || keyEvent.key == Key.Enter) {
+					when (keyEvent.nativeKeyEvent.action) {
+						android.view.KeyEvent.ACTION_UP -> {
+							onClick()
+							true
+						}
+						android.view.KeyEvent.ACTION_DOWN -> true
+						else -> false
+					}
+				} else {
+					false
+				}
+			}
 			.then(
 				if (isFocused) {
 					Modifier

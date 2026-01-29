@@ -55,6 +55,7 @@ import org.jellyfin.androidtv.util.CoroutineUtils;
 import org.jellyfin.androidtv.util.InfoLayoutHelper;
 import org.jellyfin.androidtv.util.KeyProcessor;
 import org.jellyfin.androidtv.util.MarkdownRenderer;
+import org.jellyfin.androidtv.util.Utils;
 import org.jellyfin.androidtv.util.sdk.ApiClientFactory;
 import org.jellyfin.androidtv.util.sdk.compat.JavaCompat;
 import org.jellyfin.sdk.api.client.ApiClient;
@@ -64,6 +65,7 @@ import org.koin.java.KoinJavaComponent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import kotlin.Lazy;
 import kotlinx.serialization.json.Json;
@@ -88,6 +90,7 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
     protected BaseItemKind itemType;
     protected boolean showViews = true;
     protected boolean justLoaded = true;
+    protected UUID mUserId = null;  // For multi-server support
 
     protected RowsSupportFragment mRowsFragment;
     protected CompositeClickedListener mClickedListener = new CompositeClickedListener();
@@ -170,6 +173,9 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
         if (serverIdArg != null && (mFolder.getServerId() == null || mFolder.getServerId().isEmpty())) {
             mFolder = JavaCompat.copyWithServerId(mFolder, serverIdArg);
         }
+        
+        // Store userId from arguments for API client creation
+        mUserId = Utils.uuidOrNull(getArguments().getString("UserId"));
 
         if (mFolder.getCollectionType() != null) {
             switch (mFolder.getCollectionType()) {
@@ -240,7 +246,16 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
         ApiClient folderApiClient = null;
         String folderServerId = null;
         if (mFolder != null) {
-            folderApiClient = apiClientFactory.getValue().getApiClientForItem(mFolder);
+            // Use userId if available (from navigation arguments) for correct server authentication
+            if (mUserId != null && mFolder.getServerId() != null) {
+                UUID serverId = Utils.uuidOrNull(mFolder.getServerId());
+                if (serverId != null) {
+                    folderApiClient = apiClientFactory.getValue().getApiClient(serverId, mUserId);
+                }
+            }
+            if (folderApiClient == null) {
+                folderApiClient = apiClientFactory.getValue().getApiClientForItem(mFolder);
+            }
             folderServerId = mFolder.getServerId();
         }
         if (folderApiClient == null) {

@@ -76,8 +76,10 @@ public class ItemLauncher {
 
     public void launch(final BaseRowItem rowItem, MutableObjectAdapter<Object> adapter, final Context context) {
         UUID serverId = null;
+        UUID userId = null;
         if (rowItem instanceof AggregatedItemBaseRowItem) {
             serverId = ((AggregatedItemBaseRowItem) rowItem).getServer().getId();
+            userId = ((AggregatedItemBaseRowItem) rowItem).getUserId();
         } else {
             BaseItemDto item = rowItem.getBaseItem();
             if (item != null && item.getServerId() != null) {
@@ -146,11 +148,11 @@ public class ItemLauncher {
 
                         return;
                     case SEASON:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.folderBrowser(baseItem, serverId));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.folderBrowser(baseItem, serverId, userId));
                         return;
 
                     case BOX_SET:
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.collectionBrowser(baseItem, serverId));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.collectionBrowser(baseItem, serverId, userId));
                         return;
 
                     case PHOTO:
@@ -202,11 +204,11 @@ public class ItemLauncher {
                         baseItem = JavaCompat.copyWithDisplayPreferencesId(baseItem, baseItem.getId().toString());
                     }
 
-                    // Pass serverId for aggregated items so the browser can use the correct server
+                    // Pass serverId and userId for aggregated items so the browser can use the correct server
                     if (serverId != null) {
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(baseItem, serverId));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(baseItem, serverId, userId));
                     } else {
-                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(baseItem, null));
+                        navigationRepository.getValue().navigate(Destinations.INSTANCE.libraryBrowser(baseItem, null, null));
                     }
                 } else {
                     switch (rowItem.getSelectAction()) {
