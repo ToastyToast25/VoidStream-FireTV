@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.ui.settings.screen.customization
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -145,26 +146,25 @@ fun SettingsCustomizationScreen() {
 		item {
 			val userSettingPreferences = koinInject<UserSettingPreferences>()
 			var enableEpisodeRatings by rememberPreference(userSettingPreferences, UserSettingPreferences.enableEpisodeRatings)
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_star), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.pref_episode_ratings)) },
-				captionContent = { Text(stringResource(R.string.pref_episode_ratings_description)) },
-				trailingContent = { Checkbox(checked = enableEpisodeRatings) },
-				onClick = { enableEpisodeRatings = !enableEpisodeRatings }
-			)
-		}
-
-		item {
-			val userSettingPreferences = koinInject<UserSettingPreferences>()
-			val enableEpisodeRatings by rememberPreference(userSettingPreferences, UserSettingPreferences.enableEpisodeRatings)
 			var tmdbApiKey by rememberPreference(userSettingPreferences, UserSettingPreferences.tmdbApiKey)
-			ListButton(
-				leadingContent = { Icon(painterResource(R.drawable.ic_key), contentDescription = null) },
-				headingContent = { Text(stringResource(R.string.pref_tmdb_api_key)) },
-				captionContent = { Text(if (tmdbApiKey.isNotEmpty()) "API Key: ${tmdbApiKey.take(8)}..." else stringResource(R.string.pref_tmdb_api_key_description)) },
-				enabled = enableEpisodeRatings,
-				onClick = { router.push(Routes.MOONFIN_TMDB_API_KEY) }
-			)
+			
+			Column {
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_star), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.pref_episode_ratings)) },
+					captionContent = { Text(stringResource(R.string.pref_episode_ratings_description)) },
+					trailingContent = { Checkbox(checked = enableEpisodeRatings) },
+					onClick = { enableEpisodeRatings = !enableEpisodeRatings }
+				)
+				
+				ListButton(
+					leadingContent = { Icon(painterResource(R.drawable.ic_key), contentDescription = null) },
+					headingContent = { Text(stringResource(R.string.pref_tmdb_api_key)) },
+					captionContent = { Text(if (tmdbApiKey.isNotEmpty()) "API Key: ${tmdbApiKey.take(8)}..." else stringResource(R.string.pref_tmdb_api_key_description)) },
+					enabled = enableEpisodeRatings,
+					onClick = { router.push(Routes.MOONFIN_TMDB_API_KEY) }
+				)
+			}
 		}
 
 		// Toolbar Customization (Moonfin)

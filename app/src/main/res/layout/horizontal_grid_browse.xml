@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@+id/statusText"
-        android:layout_below="@+id/infoRow"
+        android:layout_below="@+id/ratingsRow"
         android:layout_alignParentStart="true"
         android:layout_marginTop="40dp"
         android:layout_marginBottom="0dp"
@@ -54,6 +54,16 @@
         android:layout_alignStart="@+id/title"
         android:layout_marginTop="5sp"
         android:id="@+id/infoRow"
+        android:layout_toStartOf="@+id/clock"/>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_width="wrap_content"
+        android:layout_height="20sp"
+        android:layout_below="@+id/infoRow"
+        android:layout_alignStart="@+id/title"
+        android:layout_marginTop="2sp"
+        android:id="@+id/ratingsRow"
         android:layout_toStartOf="@+id/clock"/>
 
     <LinearLayout

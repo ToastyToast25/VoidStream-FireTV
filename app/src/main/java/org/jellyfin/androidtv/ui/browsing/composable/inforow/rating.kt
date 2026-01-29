@@ -200,13 +200,13 @@ fun InfoRowMultipleRatings(item: BaseItemDto) {
 		horizontalArrangement = Arrangement.spacedBy(8.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
-		// Show episode-specific TMDB rating first if available
+		// Show TMDB episode rating
 		if (enableEpisodeRatings && isEpisode && episodeRating != null) {
-			RatingDisplay("tmdb_episode", episodeRating!! / 10f)
+			RatingDisplay("tmdb_episode", allRatings["tmdb_episode"]!!)
 		}
 		
 		enabledRatings.forEach { ratingType ->
-			// Skip TMDB for episodes if episode ratings are enabled (we show episode-specific above)
+			// Skip TMDB for episodes if episode ratings are enabled
 			if (isEpisode && enableEpisodeRatings && ratingType == RatingType.RATING_TMDB && episodeRating != null) {
 				return@forEach
 			}
@@ -265,7 +265,7 @@ private fun RatingDisplay(sourceKey: String, rating: Float) {
 		"STARS" -> InfoRowCommunityRating(rating)
 		"imdb" -> RatingItemWithLogo(R.drawable.ic_imdb, "IMDB", String.format("%.1f", rating * 10f))
 		"tmdb" -> RatingItemWithLogo(R.drawable.ic_tmdb, "TMDB", "${(rating * 100f).toInt()}%")
-		"tmdb_episode" -> RatingItemWithLogo(R.drawable.ic_tmdb, "TMDB Episode", "${(rating * 100f).toInt()}%")
+		"tmdb_episode" -> RatingItemWithLogo(R.drawable.ic_tmdb, "TMDB", "${(rating * 100f).toInt()}%")
 		"metacritic" -> RatingItemWithLogo(R.drawable.ic_metacritic, "Metacritic", "${(rating * 100f).toInt()}%")
 		"trakt" -> RatingItemWithLogo(R.drawable.ic_trakt, "Trakt", "${(rating * 100f).toInt()}%")
 		"letterboxd" -> RatingItemWithLogo(R.drawable.ic_letterboxd, "Letterboxd", String.format("%.1f", rating * 5f))

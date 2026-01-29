@@ -278,9 +278,11 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         if (item != null) {
             binding.title.setText(item.getFullName(requireContext()));
             InfoLayoutHelper.addInfoRow(requireContext(), item.getBaseItem(), binding.infoRow, true);
+            InfoLayoutHelper.addRatingsRow(requireContext(), item.getBaseItem(), binding.ratingsRow);
         } else {
             binding.title.setText("");
             binding.infoRow.removeAllViews();
+            binding.ratingsRow.removeAllViews();
         }
     }
 
@@ -947,6 +949,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                 mCurrentItem = (BaseRowItem) item;
                 binding.title.setText(mCurrentItem.getName(requireContext()));
                 binding.infoRow.removeAllViews();
+                binding.ratingsRow.removeAllViews();
                 mHandler.postDelayed(mDelayedSetItem, VIEW_SELECT_UPDATE_DELAY);
 
                 if (!determiningPosterSize)
