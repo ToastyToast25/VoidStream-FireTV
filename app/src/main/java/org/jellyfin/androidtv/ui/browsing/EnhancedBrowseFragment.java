@@ -507,7 +507,6 @@ public class EnhancedBrowseFragment extends Fragment implements RowLoader, View.
 
             mCurrentItem = rowItem;
             mCurrentRow = (ListRow) row;
-            mInfoRow.removeAllViews();
 
             mTitle.setText(rowItem.getName(requireContext()));
 

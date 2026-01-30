@@ -20,10 +20,12 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.core.text.HtmlCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
 
 import org.jellyfin.androidtv.R;
+import org.jellyfin.androidtv.util.TextUtilsKt;
 import org.jellyfin.androidtv.data.model.DataRefreshService;
 import org.jellyfin.androidtv.data.service.BackgroundService;
 import org.jellyfin.androidtv.data.service.BlurContext;
@@ -382,7 +384,12 @@ public class ItemListFragment extends Fragment implements View.OnKeyListener {
         InfoLayoutHelper.addRatingsRow(requireContext(), item, ratingsRow);
         addGenres(mGenreRow);
         addButtons(BUTTON_SIZE);
-        mSummary.setText(mBaseItem.getOverview());
+        String overview = mBaseItem.getOverview();
+        if (overview != null) {
+            mSummary.setText(TextUtilsKt.stripHtml(overview));
+        } else {
+            mSummary.setText("");
+        }
 
         Double aspect = imageHelper.getValue().getImageAspectRatio(item, false);
         String primaryImageUrl = imageHelper.getValue().getPrimaryImageUrl(item, null, ImageHelper.MAX_PRIMARY_IMAGE_HEIGHT);

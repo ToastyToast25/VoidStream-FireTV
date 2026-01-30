@@ -598,6 +598,8 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         if (!justLoaded) {
             //Re-retrieve anything that needs it but delay slightly so we don't take away gui landing
             if (mAdapter != null) {
+                // Save the current selected position before any refresh operations
+                final int savedPosition = mSelectedPosition;
                 mHandler.postDelayed(() -> {
                     if (!getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED))
                         return;
@@ -605,6 +607,10 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                     if (mAdapter != null && mAdapter.size() > 0) {
                         if (!mAdapter.ReRetrieveIfNeeded()) {
                             refreshCurrentItem();
+                        }
+                        // Restore the selected position after refresh
+                        if (savedPosition >= 0 && savedPosition < mAdapter.size()) {
+                            mGridView.setSelectedPosition(savedPosition);
                         }
                     }
                 }, 500);
@@ -719,6 +725,18 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         }
 
         mAdapter.setSortBy(getSortOption(libraryPreferences.get(LibraryPreferences.Companion.getSortBy())));
+        
+        // Set up a listener to restore position after retrieval completes
+        final int savedPosition = mSelectedPosition;
+        mAdapter.setRetrieveFinishedListener(new EmptyResponse(getLifecycle()) {
+            @Override
+            public void onResponse() {
+                if (savedPosition >= 0 && savedPosition < mAdapter.size() && mGridView != null) {
+                    mGridView.setSelectedPosition(savedPosition);
+                }
+            }
+        });
+        
         mAdapter.Retrieve();
     }
 
@@ -949,13 +967,13 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
             if (!(item instanceof BaseRowItem)) {
                 mCurrentItem = null;
                 binding.title.setText(mainTitle);
+                binding.infoRow.removeAllViews();
+                binding.ratingsRow.removeAllViews();
                 //fill in default background
                 backgroundService.getValue().clearBackgrounds();
             } else {
                 mCurrentItem = (BaseRowItem) item;
                 binding.title.setText(mCurrentItem.getName(requireContext()));
-                binding.infoRow.removeAllViews();
-                binding.ratingsRow.removeAllViews();
                 mHandler.postDelayed(mDelayedSetItem, VIEW_SELECT_UPDATE_DELAY);
 
                 if (!determiningPosterSize)
