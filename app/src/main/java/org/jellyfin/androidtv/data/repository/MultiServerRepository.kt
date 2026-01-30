@@ -16,6 +16,7 @@ import org.jellyfin.androidtv.preference.PreferencesRepository
 import org.jellyfin.androidtv.util.sdk.forUser
 import org.jellyfin.sdk.Jellyfin
 import org.jellyfin.sdk.api.client.ApiClient
+import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.extensions.itemsApi
 import org.jellyfin.sdk.api.client.extensions.tvShowsApi
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
@@ -214,7 +215,12 @@ class MultiServerRepositoryImpl(
 					)
 				}
 			} catch (e: Exception) {
-				Timber.e(e, "MultiServerRepository: Error getting libraries from ${session.server.name}")
+				// Use warning level for transient server errors (5xx) to avoid triggering crash reports
+				if (e is InvalidStatusException && e.status in 500..599) {
+					Timber.w("MultiServerRepository: Server ${session.server.name} temporarily unavailable (HTTP ${e.status})")
+				} else {
+					Timber.e(e, "MultiServerRepository: Error getting libraries from ${session.server.name}")
+				}
 				emptyList()
 			}
 		}.sortedWith(
@@ -262,7 +268,12 @@ class MultiServerRepositoryImpl(
 						emptyList()
 					}
 				} catch (e: Exception) {
-					Timber.e(e, "MultiServerRepository: Error getting resume items from ${session.server.name}")
+					// Use warning level for transient server errors (5xx) to avoid triggering crash reports
+					if (e is InvalidStatusException && e.status in 500..599) {
+						Timber.w("MultiServerRepository: Server ${session.server.name} temporarily unavailable (HTTP ${e.status})")
+					} else {
+						Timber.e(e, "MultiServerRepository: Error getting resume items from ${session.server.name}")
+					}
 					emptyList()
 				}
 			}
@@ -314,7 +325,12 @@ class MultiServerRepositoryImpl(
 						emptyList()
 					}
 				} catch (e: Exception) {
-					Timber.e(e, "MultiServerRepository: Error getting latest items from ${session.server.name}")
+					// Use warning level for transient server errors (5xx) to avoid triggering crash reports
+					if (e is InvalidStatusException && e.status in 500..599) {
+						Timber.w("MultiServerRepository: Server ${session.server.name} temporarily unavailable (HTTP ${e.status})")
+					} else {
+						Timber.e(e, "MultiServerRepository: Error getting latest items from ${session.server.name}")
+					}
 					emptyList()
 				}
 			}
@@ -361,7 +377,12 @@ class MultiServerRepositoryImpl(
 						emptyList()
 					}
 				} catch (e: Exception) {
-					Timber.e(e, "MultiServerRepository: Error getting next up items from ${session.server.name}")
+					// Use warning level for transient server errors (5xx) to avoid triggering crash reports
+					if (e is InvalidStatusException && e.status in 500..599) {
+						Timber.w("MultiServerRepository: Server ${session.server.name} temporarily unavailable (HTTP ${e.status})")
+					} else {
+						Timber.e(e, "MultiServerRepository: Error getting next up items from ${session.server.name}")
+					}
 					emptyList()
 				}
 			}

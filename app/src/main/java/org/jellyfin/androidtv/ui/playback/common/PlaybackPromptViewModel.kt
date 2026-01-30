@@ -14,9 +14,11 @@ import org.jellyfin.androidtv.util.apiclient.getPrimaryImage
 import org.jellyfin.androidtv.util.apiclient.ioCall
 import org.jellyfin.androidtv.util.sdk.getDisplayName
 import org.jellyfin.sdk.api.client.ApiClient
+import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.api.client.extensions.userLibraryApi
 import org.jellyfin.sdk.model.UUID
 import org.jellyfin.sdk.model.api.BaseItemDto
+import timber.log.Timber
 
 /**
  * Data class representing item information for playback prompts.
@@ -64,29 +66,52 @@ abstract class PlaybackPromptViewModel<S : Enum<S>>(
 			_item.value = null
 			_state.value = noDataState
 		} else {
-			_item.value = loadItemData(id)
+			val itemData = loadItemData(id)
+			if (itemData == null) {
+				// Item not found or error loading - treat as no data
+				_item.value = null
+				_state.value = noDataState
+			} else {
+				_item.value = itemData
+			}
 		}
 	}
 	
 	/**
 	 * Load item data from the API.
+	 * Returns null if the item is not found (404) or another error occurs.
 	 */
-	private suspend fun loadItemData(id: UUID) = api.ioCall {
-		val item by userLibraryApi.getItem(itemId = id)
+	private suspend fun loadItemData(id: UUID): PlaybackPromptItemData? = try {
+		api.ioCall {
+			val item by userLibraryApi.getItem(itemId = id)
 
-		val thumbnail = when (userPreferences[UserPreferences.nextUpBehavior]) {
-			NextUpBehavior.EXTENDED -> item.getPrimaryImage()
-			else -> null
+			val thumbnail = when (userPreferences[UserPreferences.nextUpBehavior]) {
+				NextUpBehavior.EXTENDED -> item.getPrimaryImage()
+				else -> null
+			}
+			val logo = item.getLogoImage()
+			val title = item.getDisplayName(context)
+
+			PlaybackPromptItemData(
+				item,
+				item.id,
+				title,
+				thumbnail,
+				logo,
+			)
 		}
-		val logo = item.getLogoImage()
-		val title = item.getDisplayName(context)
-
-		PlaybackPromptItemData(
-			item,
-			item.id,
-			title,
-			thumbnail,
-			logo,
-		)
+	} catch (e: InvalidStatusException) {
+		// Handle HTTP errors gracefully (404 = item not found, 5xx = server errors)
+		if (e.status == 404) {
+			Timber.w("Item $id not found on server (possibly deleted)")
+		} else if (e.status in 500..599) {
+			Timber.w("Server error ${e.status} while loading item $id")
+		} else {
+			Timber.e(e, "HTTP error loading item $id")
+		}
+		null
+	} catch (e: Exception) {
+		Timber.e(e, "Error loading item data for $id")
+		null
 	}
 }

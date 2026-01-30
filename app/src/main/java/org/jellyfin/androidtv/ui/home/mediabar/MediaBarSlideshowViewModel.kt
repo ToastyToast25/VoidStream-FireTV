@@ -28,6 +28,7 @@ import coil3.ImageLoader
 import coil3.request.ImageRequest
 import org.jellyfin.sdk.api.client.extensions.imageApi
 import org.jellyfin.sdk.api.client.extensions.itemsApi
+import org.jellyfin.sdk.api.client.exception.InvalidStatusException
 import org.jellyfin.sdk.model.api.BaseItemDto
 import org.jellyfin.sdk.model.api.BaseItemKind
 import org.jellyfin.sdk.model.api.ImageType
@@ -143,7 +144,11 @@ class MediaBarSlideshowViewModel(
 					}
 				}
 		} catch (e: Exception) {
-			Timber.w(e, "Failed to get library views")
+			if (e is InvalidStatusException && e.status in 500..599) {
+				Timber.w("Failed to get library views: Server error ${e.status} - ${e.message}")
+			} else {
+				Timber.w(e, "Failed to get library views")
+			}
 			emptyList()
 		}
 		
@@ -174,7 +179,11 @@ class MediaBarSlideshowViewModel(
 				)
 				response.items.orEmpty()
 			} catch (e: Exception) {
-				Timber.w(e, "Failed to fetch from library ${library.name}")
+				if (e is InvalidStatusException && e.status in 500..599) {
+					Timber.w("Failed to fetch from library ${library.name}: Server error ${e.status} - ${e.message}")
+				} else {
+					Timber.w(e, "Failed to fetch from library ${library.name}")
+				}
 				null
 			}
 		}.flatten()
@@ -242,7 +251,11 @@ class MediaBarSlideshowViewModel(
 									Timber.d("MediaBar: Got ${serverItems.size} items from server ${session.server.name}")
 									serverItems.map { ItemWithApiClient(it, session.apiClient, session.server.id) }
 								} catch (e: Exception) {
+								if (e is InvalidStatusException && e.status in 500..599) {
+									Timber.w("MediaBar: Failed to fetch from server ${session.server.name}: Server error ${e.status} - ${e.message}")
+								} else {
 									Timber.e(e, "MediaBar: Failed to fetch from server ${session.server.name}")
+								}
 									emptyList()
 								}
 							} ?: run {
@@ -326,8 +339,14 @@ class MediaBarSlideshowViewModel(
 					_state.value = MediaBarState.Error("No items found")
 				}
 			} catch (e: Exception) {
-				Timber.e(e, "Failed to load slideshow items: ${e::class.simpleName} - ${e.message}")
-				_state.value = MediaBarState.Error("Failed to load items: ${e::class.simpleName ?: "Unknown error"}")
+				if (e is InvalidStatusException && e.status in 500..599) {
+					// Transient server errors (5xx) should not be treated as critical failures
+					Timber.w("Failed to load slideshow items: Server error ${e.status} - ${e.message}")
+					_state.value = MediaBarState.Error("Server temporarily unavailable")
+				} else {
+					Timber.e(e, "Failed to load slideshow items: ${e::class.simpleName} - ${e.message}")
+					_state.value = MediaBarState.Error("Failed to load items: ${e::class.simpleName ?: "Unknown error"}")
+				}
 			}
 		}
 	}
@@ -545,7 +564,11 @@ class MediaBarSlideshowViewModel(
 									}
 									serverItems.map { ItemWithApiClient(it, session.apiClient, session.server.id) }
 								} catch (e: Exception) {
+								if (e is InvalidStatusException && e.status in 500..599) {
+									Timber.w("MediaBar refresh: Failed to fetch from server ${session.server.name}: Server error ${e.status} - ${e.message}")
+								} else {
 									Timber.e(e, "MediaBar refresh: Failed to fetch from server ${session.server.name}")
+								}
 									emptyList()
 								}
 							} ?: run {

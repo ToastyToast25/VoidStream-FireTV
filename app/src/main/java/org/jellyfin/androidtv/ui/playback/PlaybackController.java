@@ -1498,6 +1498,13 @@ public class PlaybackController implements PlaybackControllerNotifiable {
 
     @Override
     public void onPrepared() {
+        // Guard against race condition where playback is stopped before onPrepared callback
+        // This can happen during rapid playlist navigation
+        if (mCurrentStreamInfo == null) {
+            Timber.w("onPrepared called but mCurrentStreamInfo is null - playback may have been stopped");
+            return;
+        }
+
         if (mPlaybackState == PlaybackState.BUFFERING) {
             if (mFragment != null) {
                 mFragment.setFadingEnabled(true);
