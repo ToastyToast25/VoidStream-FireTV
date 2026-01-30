@@ -942,9 +942,13 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
             if (mediaSource.getMediaStreams() != null) {
                 List<MediaStream> mediaStreams = mediaSource.getMediaStreams();
                 
-                long audioTrackCount = mediaStreams.stream()
-                        .filter(stream -> stream.getType() == MediaStreamType.AUDIO)
-                        .count();
+                // Count audio tracks without using streams (desugaring issue)
+                int audioTrackCount = 0;
+                for (MediaStream stream : mediaStreams) {
+                    if (stream.getType() == MediaStreamType.AUDIO) {
+                        audioTrackCount++;
+                    }
+                }
                 if (audioTrackCount > 1) {
                     mAudioTrackButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_audio, buttonSize, 0, getString(R.string.lbl_audio_track), new View.OnClickListener() {
                         @Override
@@ -955,9 +959,13 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                     mDetailsOverviewRow.addAction(mAudioTrackButton);
                 }
 
-                long subtitleTrackCount = mediaStreams.stream()
-                        .filter(stream -> stream.getType() == MediaStreamType.SUBTITLE)
-                        .count();
+                // Count subtitle tracks without using streams (desugaring issue)
+                int subtitleTrackCount = 0;
+                for (MediaStream stream : mediaStreams) {
+                    if (stream.getType() == MediaStreamType.SUBTITLE) {
+                        subtitleTrackCount++;
+                    }
+                }
                 if (subtitleTrackCount > 0) {
                     mSubtitleTrackButton = TextUnderButton.create(requireContext(), R.drawable.ic_select_subtitle, buttonSize, 0, getString(R.string.lbl_subtitle_track), new View.OnClickListener() {
                         @Override
