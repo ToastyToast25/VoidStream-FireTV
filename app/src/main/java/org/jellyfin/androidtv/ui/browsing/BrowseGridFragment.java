@@ -605,13 +605,9 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
                         return;
 
                     if (mAdapter != null && mAdapter.size() > 0) {
-                        if (!mAdapter.ReRetrieveIfNeeded()) {
-                            refreshCurrentItem();
-                        }
-                        // Restore the selected position after refresh
-                        if (savedPosition >= 0 && savedPosition < mAdapter.size()) {
-                            mGridView.setSelectedPosition(savedPosition);
-                        }
+                        // Only refresh the adapter, don't refresh current item to avoid unnecessary poster reload
+                        mAdapter.ReRetrieveIfNeeded();
+                        restorePositionAndUpdateBackground(savedPosition);
                     }
                 }, 500);
             }
@@ -731,9 +727,7 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
         mAdapter.setRetrieveFinishedListener(new EmptyResponse(getLifecycle()) {
             @Override
             public void onResponse() {
-                if (savedPosition >= 0 && savedPosition < mAdapter.size() && mGridView != null) {
-                    mGridView.setSelectedPosition(savedPosition);
-                }
+                restorePositionAndUpdateBackground(savedPosition);
             }
         });
         
@@ -946,6 +940,23 @@ public class BrowseGridFragment extends Fragment implements View.OnKeyListener {
 
             if (!(item instanceof BaseRowItem)) return;
             itemLauncher.getValue().launch((BaseRowItem) item, mAdapter, requireContext());
+        }
+    }
+
+    private void restorePositionAndUpdateBackground(int position) {
+        if (position >= 0 && position < mAdapter.size() && mGridView != null) {
+            // Only change selection if it's different to avoid triggering card rebind
+            if (mGridView.getSelectedPosition() != position) {
+                mGridView.setSelectedPosition(position);
+            }
+            Object item = mAdapter.get(position);
+            if (item instanceof BaseRowItem) {
+                BaseRowItem rowItem = (BaseRowItem) item;
+                mCurrentItem = rowItem;
+                mHandler.removeCallbacks(mDelayedSetItem);
+                backgroundService.getValue().setBackground(rowItem.getBaseItem(), BlurContext.BROWSING);
+                setItem(rowItem);
+            }
         }
     }
 
