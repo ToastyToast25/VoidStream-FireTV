@@ -1,5 +1,6 @@
 package org.jellyfin.androidtv.ui.settings.screen.customization
 
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,6 +21,7 @@ import org.koin.compose.koinInject
 @Composable
 fun SettingsCustomizationThemeScreen() {
 	val router = LocalRouter.current
+	val activity = LocalActivity.current
 	val userPreferences = koinInject<UserPreferences>()
 	var appTheme by rememberPreference(userPreferences, UserPreferences.appTheme)
 
@@ -36,8 +38,13 @@ fun SettingsCustomizationThemeScreen() {
 				headingContent = { Text(stringResource(entry.nameRes)) },
 				trailingContent = { RadioButton(checked = appTheme == entry) },
 				onClick = {
-					appTheme = entry
-					router.back()
+					if (appTheme != entry) {
+						appTheme = entry
+						// Recreate activity to apply new theme
+						activity?.recreate()
+					} else {
+						router.back()
+					}
 				}
 			)
 		}
