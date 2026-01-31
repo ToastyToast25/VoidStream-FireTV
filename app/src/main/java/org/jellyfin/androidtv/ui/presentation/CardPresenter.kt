@@ -177,7 +177,6 @@ private fun BaseRowItem.getDisplayConfig(imageType: ImageType, uniformAspect: Bo
 					else -> ImageHelper.ASPECT_RATIO_16_9.toFloat()
 				},
 				iconRes = R.drawable.ic_tv,
-				overrideShowInfo = !preferSeriesPoster,
 			)
 
 			BaseItemKind.COLLECTION_FOLDER, BaseItemKind.USER_VIEW -> base.copy(
