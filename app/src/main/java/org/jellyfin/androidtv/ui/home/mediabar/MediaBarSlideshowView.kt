@@ -226,7 +226,7 @@ fun MediaBarSlideshowView(
 					}
 				}
 
-				// Navigation arrows (without padding, close to edges, raised by 40%)
+				// Navigation arrows
 				if (currentState.items.size > 1) {
 					// Left arrow is hidden when sidebar is enabled
 					if (!isSidebarEnabled) {
@@ -313,19 +313,7 @@ private fun MediaInfoOverlay(
 		Column(
 			verticalArrangement = Arrangement.spacedBy(8.dp)
 		) {
-			// Title (only if no logo)
-			if (item.logoUrl == null) {
-				Text(
-					text = item.title,
-					fontSize = 32.sp,
-					fontWeight = FontWeight.Bold,
-					color = Color.White,
-					maxLines = 2,
-					overflow = TextOverflow.Ellipsis
-				)
-			}
-
-		// Metadata row
+			// Metadata row
 		Row(
 			horizontalArrangement = Arrangement.spacedBy(16.dp),
 			verticalAlignment = Alignment.CenterVertically
@@ -373,7 +361,7 @@ private fun MediaInfoOverlay(
 				text = overview.toHtmlSpanned().toString(),
 				fontSize = 14.sp,
 				color = Color.White,
-				maxLines = 3,
+				maxLines = 2,
 				overflow = TextOverflow.Ellipsis,
 				lineHeight = 20.sp
 			)
@@ -508,7 +496,11 @@ private fun MediaBarRating(item: MediaBarSlideItem) {
 	}
 	
 	// Don't render while loading to avoid flicker
-	if (isLoading && needsExternalRating) return
+	if (isLoading && needsExternalRating) {
+		// Show placeholder to maintain layout height
+		Box(modifier = Modifier.height(21.dp))
+		return
+	}
 	
 	// Show ratings in a wrapping flow row
 	@OptIn(ExperimentalLayoutApi::class)
