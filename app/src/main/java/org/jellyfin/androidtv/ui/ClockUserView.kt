@@ -15,7 +15,7 @@ import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.ClockBehavior
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
-import org.jellyfin.androidtv.ui.shuffle.executeQuickShuffle
+import org.jellyfin.androidtv.ui.shuffle.ShuffleManager
 import org.jellyfin.androidtv.ui.shuffle.showShuffleDialog
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -29,6 +29,7 @@ class ClockUserView @JvmOverloads constructor(
 	private val binding: ClockUserBugBinding = ClockUserBugBinding.inflate(LayoutInflater.from(context), this, true)
 	private val userPreferences by inject<UserPreferences>()
 	private val navigationRepository by inject<NavigationRepository>()
+	private val shuffleManager by inject<ShuffleManager>()
 	
 	private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -50,7 +51,7 @@ class ClockUserView @JvmOverloads constructor(
 
 		binding.shuffle.setOnClickListener {
 			scope.launch {
-				executeQuickShuffle(userPreferences, navigationRepository)
+				shuffleManager.quickShuffle(context)
 			}
 		}
 

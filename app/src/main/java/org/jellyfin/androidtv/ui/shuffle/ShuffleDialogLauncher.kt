@@ -4,7 +4,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -16,16 +15,15 @@ import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.base.JellyfinTheme
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
-import org.jellyfin.androidtv.util.sdk.ApiClientFactory
 import org.jellyfin.sdk.api.client.ApiClient
 import org.jellyfin.sdk.model.api.BaseItemDto
-import org.jellyfin.sdk.model.api.CollectionType
 import org.koin.compose.koinInject
 import timber.log.Timber
 
 /**
  * Show the shuffle dialog from Java code (e.g., FullDetailsFragment)
  */
+@Suppress("UNUSED_PARAMETER")
 fun showShuffleDialog(
 	context: android.content.Context,
 	navigationRepository: NavigationRepository
@@ -36,38 +34,34 @@ fun showShuffleDialog(
 			setContent {
 				JellyfinTheme {
 					val api = koinInject<ApiClient>()
-					val apiClientFactory = koinInject<ApiClientFactory>()
+					val shuffleManager = koinInject<ShuffleManager>()
 					val userPreferences = koinInject<UserPreferences>()
 					val userViewsRepository = koinInject<UserViewsRepository>()
 					val multiServerRepository = koinInject<MultiServerRepository>()
-					val scope = rememberCoroutineScope()
 
 					var userViews by remember { mutableStateOf<List<BaseItemDto>>(emptyList()) }
 					var enableMultiServer by remember { mutableStateOf(false) }
 					var shuffleContentType by remember { mutableStateOf("both") }
 					var aggregatedLibraries by remember { mutableStateOf<List<AggregatedLibrary>>(emptyList()) }
 					var showDialog by remember { mutableStateOf(true) }
-					
+
 					LaunchedEffect(Unit) {
-						scope.launch {
-							try {
-								enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries] ?: false
-								shuffleContentType = userPreferences[UserPreferences.shuffleContentType] ?: "both"
-								val views = userViewsRepository.views.first()
+						try {
+							enableMultiServer = userPreferences[UserPreferences.enableMultiServerLibraries]
+							shuffleContentType = userPreferences[UserPreferences.shuffleContentType]
+							val views = userViewsRepository.views.first()
 							userViews = views.toList()
-								if (enableMultiServer) {
-									try {
-										aggregatedLibraries = withContext(Dispatchers.IO) {
-											multiServerRepository.getAggregatedLibraries()
-				
-										}
-									} catch (e: Exception) {
-										Timber.e(e, "Failed to load aggregated libraries")
+							if (enableMultiServer) {
+								try {
+									aggregatedLibraries = withContext(Dispatchers.IO) {
+										multiServerRepository.getAggregatedLibraries()
 									}
+								} catch (e: Exception) {
+									Timber.e(e, "Failed to load aggregated libraries")
 								}
-							} catch (e: Exception) {
-								Timber.e(e, "Failed to load user views")
 							}
+						} catch (e: Exception) {
+							Timber.e(e, "Failed to load user views")
 						}
 					}
 
@@ -83,16 +77,15 @@ fun showShuffleDialog(
 								dialog.dismiss()
 							},
 							onShuffle = { libraryId, serverId, genreName, contentType, libraryCollectionType ->
+							// Use a non-compose scope so the shuffle survives dialog dismissal
 							kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
-								executeShuffle(
+								shuffleManager.libraryShuffle(
+									context = context,
 									libraryId = libraryId,
 									serverId = serverId,
 									genreName = genreName,
 									contentType = contentType,
-									libraryCollectionType = libraryCollectionType,
-									api = api,
-									apiClientFactory = apiClientFactory,
-									navigationRepository = navigationRepository
+									libraryCollectionType = libraryCollectionType
 								)
 							}
 							showDialog = false

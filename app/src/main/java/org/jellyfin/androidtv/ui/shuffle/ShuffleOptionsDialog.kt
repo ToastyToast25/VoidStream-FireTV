@@ -10,7 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Surface
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -93,146 +93,140 @@ fun ShuffleOptionsDialog(
 		}
 	}
 
-	Surface(
-		modifier = Modifier,
-		color = Color.Black.copy(alpha = 0.95f),
-		shape = androidx.compose.material3.MaterialTheme.shapes.extraLarge
-	) {
-		AlertDialog(
-			onDismissRequest = onDismiss,
-			title = {
-				androidx.compose.material3.Text(
-					when (mode) {
-						ShuffleMode.MAIN -> "Shuffle By"
-						ShuffleMode.LIBRARIES -> "Select Library"
-						ShuffleMode.GENRES -> "Select Genre"
-					},
-					color = Color.Gray
-				)
-			},
-			text = {
-				Column(modifier = Modifier.fillMaxWidth()) {
-					when (mode) {
-						ShuffleMode.MAIN -> {
-							Button(
-								onClick = { mode = ShuffleMode.LIBRARIES },
-								modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-								colors = ButtonDefaults.colors(
-									containerColor = JellyfinTheme.colorScheme.button,
-									contentColor = JellyfinTheme.colorScheme.onButton,
-									focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
-									focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
-								)
+	AlertDialog(
+		onDismissRequest = onDismiss,
+		title = {
+			androidx.compose.material3.Text(
+				when (mode) {
+					ShuffleMode.MAIN -> "Shuffle By"
+					ShuffleMode.LIBRARIES -> "Select Library"
+					ShuffleMode.GENRES -> "Select Genre"
+				},
+				color = Color.Gray
+			)
+		},
+		text = {
+			Column(modifier = Modifier.fillMaxWidth()) {
+				when (mode) {
+					ShuffleMode.MAIN -> {
+						Button(
+							onClick = { mode = ShuffleMode.LIBRARIES },
+							modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+							colors = ButtonDefaults.colors(
+								containerColor = Color.Transparent,
+								contentColor = JellyfinTheme.colorScheme.onButton,
+								focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
+								focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
+							)
+						) {
+							Row(
+								modifier = Modifier.fillMaxWidth(),
+								horizontalArrangement = Arrangement.Start,
+								verticalAlignment = Alignment.CenterVertically
 							) {
-								Row(
-									modifier = Modifier.fillMaxWidth(),
-									horizontalArrangement = Arrangement.Start,
-									verticalAlignment = Alignment.CenterVertically
-								) {
-									Icon(
-										imageVector = ImageVector.vectorResource(R.drawable.ic_folder),
-										contentDescription = null,
-										modifier = Modifier.padding(end = 12.dp)
-									)
-									androidx.compose.material3.Text("Library", color = Color.White)
-								}
+								Icon(
+									imageVector = ImageVector.vectorResource(R.drawable.ic_folder),
+									contentDescription = null,
+									modifier = Modifier.padding(end = 12.dp),
+									tint = LocalContentColor.current
+								)
+								androidx.compose.material3.Text("Library")
 							}
-							Button(
-								onClick = { mode = ShuffleMode.GENRES },
-								modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-								colors = ButtonDefaults.colors(
-									containerColor = JellyfinTheme.colorScheme.button,
-									contentColor = JellyfinTheme.colorScheme.onButton,
-									focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
-									focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
-								)
+						}
+						Button(
+							onClick = { mode = ShuffleMode.GENRES },
+							modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+							colors = ButtonDefaults.colors(
+								containerColor = Color.Transparent,
+								contentColor = JellyfinTheme.colorScheme.onButton,
+								focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
+								focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
+							)
+						) {
+							Row(
+								modifier = Modifier.fillMaxWidth(),
+								horizontalArrangement = Arrangement.Start,
+								verticalAlignment = Alignment.CenterVertically
 							) {
-								Row(
-									modifier = Modifier.fillMaxWidth(),
-									horizontalArrangement = Arrangement.Start,
-									verticalAlignment = Alignment.CenterVertically
-								) {
-									Icon(
-										imageVector = ImageVector.vectorResource(R.drawable.ic_masks),
-										contentDescription = null,
-										modifier = Modifier.padding(end = 12.dp)
+								Icon(
+									imageVector = ImageVector.vectorResource(R.drawable.ic_masks),
+									contentDescription = null,
+									modifier = Modifier.padding(end = 12.dp),
+									tint = LocalContentColor.current
+								)
+								androidx.compose.material3.Text("Genre")
+							}
+						}
+					}
+					ShuffleMode.LIBRARIES -> {
+						LazyColumn(modifier = Modifier.heightIn(max = 350.dp)) {
+							items(libraryOptions) { libOption ->
+								Button(
+									onClick = {
+										onShuffle(libOption.library.id, libOption.serverId, null, shuffleContentType, libOption.library.collectionType)
+									},
+									modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+									colors = ButtonDefaults.colors(
+										containerColor = Color.Transparent,
+										contentColor = JellyfinTheme.colorScheme.onButton,
+										focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
+										focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
 									)
-									androidx.compose.material3.Text("Genre", color = Color.White)
+								) {
+									androidx.compose.material3.Text(
+										libOption.displayName,
+										modifier = Modifier.fillMaxWidth()
+									)
 								}
 							}
 						}
-						ShuffleMode.LIBRARIES -> {
+					}
+					ShuffleMode.GENRES -> {
+						if (loadingGenres) {
+							Row(
+								modifier = Modifier.fillMaxWidth().padding(16.dp),
+								horizontalArrangement = Arrangement.Center
+							) {
+								CircularProgressIndicator(strokeWidth = 2.dp)
+							}
+						} else {
 							LazyColumn(modifier = Modifier.heightIn(max = 350.dp)) {
-								items(libraryOptions) { libOption ->
+								items(genres) { genre ->
 									Button(
 										onClick = {
-											onShuffle(libOption.library.id, libOption.serverId, null, shuffleContentType, libOption.library.collectionType)
+											onShuffle(null, null, genre.name, shuffleContentType, null)
 										},
 										modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
 										colors = ButtonDefaults.colors(
-											containerColor = JellyfinTheme.colorScheme.button,
+											containerColor = Color.Transparent,
 											contentColor = JellyfinTheme.colorScheme.onButton,
 											focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
 											focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
 										)
 									) {
 										androidx.compose.material3.Text(
-											libOption.displayName,
-											modifier = Modifier.fillMaxWidth(),
-											color = Color.White
+											genre.name ?: "",
+											modifier = Modifier.fillMaxWidth()
 										)
 									}
 								}
 							}
 						}
-						ShuffleMode.GENRES -> {
-							if (loadingGenres) {
-								Row(
-									modifier = Modifier.fillMaxWidth().padding(16.dp),
-									horizontalArrangement = Arrangement.Center
-								) {
-									CircularProgressIndicator(strokeWidth = 2.dp)
-								}
-							} else {
-								LazyColumn(modifier = Modifier.heightIn(max = 350.dp)) {
-									items(genres) { genre ->
-										Button(
-											onClick = {
-												onShuffle(null, null, genre.name, shuffleContentType, null)
-											},
-											modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-											colors = ButtonDefaults.colors(
-												containerColor = JellyfinTheme.colorScheme.button,
-												contentColor = JellyfinTheme.colorScheme.onButton,
-												focusedContainerColor = JellyfinTheme.colorScheme.buttonFocused,
-												focusedContentColor = JellyfinTheme.colorScheme.onButtonFocused,
-											)
-										) {
-											androidx.compose.material3.Text(
-												genre.name ?: "",
-												modifier = Modifier.fillMaxWidth(),
-												color = Color.White
-											)
-										}
-									}
-								}
-							}
-						}
 					}
-				}
-			},
-			confirmButton = {
-				if (mode != ShuffleMode.MAIN) {
-					TextButton(onClick = { mode = ShuffleMode.MAIN }) {
-						androidx.compose.material3.Text("Back")
-					}
-				}
-			},
-			dismissButton = {
-				TextButton(onClick = onDismiss) {
-					androidx.compose.material3.Text("Cancel")
 				}
 			}
-		)
-	}
+		},
+		confirmButton = {
+			if (mode != ShuffleMode.MAIN) {
+				TextButton(onClick = { mode = ShuffleMode.MAIN }) {
+					androidx.compose.material3.Text("Back")
+				}
+			}
+		},
+		dismissButton = {
+			TextButton(onClick = onDismiss) {
+				androidx.compose.material3.Text("Cancel")
+			}
+		}
+	)
 }

@@ -79,8 +79,8 @@ import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.ui.playback.ThemeMusicPlayer
 import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
+import org.jellyfin.androidtv.ui.shuffle.ShuffleManager
 import org.jellyfin.androidtv.ui.shuffle.ShuffleOptionsDialog
-import org.jellyfin.androidtv.ui.shuffle.executeShuffle
 import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
@@ -234,9 +234,11 @@ private fun CollapsibleSidebarContent(
 	val syncPlayViewModel = koinActivityViewModel<SyncPlayViewModel>()
 	val apiClient = koinInject<ApiClient>()
 	val apiClientFactory = koinInject<ApiClientFactory>()
+	val shuffleManager = koinInject<ShuffleManager>()
 	val themeMusicPlayer = koinInject<ThemeMusicPlayer>()
 	
 	var showShuffleDialog by remember { mutableStateOf(false) }
+	val isShuffling by shuffleManager.isShuffling.collectAsState()
 	val showShuffle = shuffleContentType != "disabled" && showShuffleButton
 	
 	val homeIcon = ImageVector.vectorResource(R.drawable.ic_house)
@@ -421,21 +423,14 @@ private fun CollapsibleSidebarContent(
 				if (showShuffle) {
 					SidebarIconItem(
 						icon = shuffleIcon,
-						label = "Shuffle",
+						label = if (isShuffling) "..." else "Shuffle",
 						showLabel = isExpanded,
 						isExpanded = isExpanded,
 						onClick = {
-							scope.launch {
-								executeShuffle(
-									libraryId = null,
-									serverId = null,
-									genreName = null,
-									contentType = shuffleContentType,
-									libraryCollectionType = null,
-									api = apiClient,
-									apiClientFactory = apiClientFactory,
-									navigationRepository = navigationRepository
-								)
+							if (!isShuffling) {
+								kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+									shuffleManager.quickShuffle(context)
+								}
 							}
 						},
 						onLongClick = { showShuffleDialog = true }
@@ -626,16 +621,14 @@ private fun CollapsibleSidebarContent(
 			onDismiss = { showShuffleDialog = false },
 			onShuffle = { libraryId, serverId, genreName, contentType, libraryCollectionType ->
 				showShuffleDialog = false
-				scope.launch {
-					executeShuffle(
+				kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+					shuffleManager.shuffle(
+						context = context,
 						libraryId = libraryId,
 						serverId = serverId,
 						genreName = genreName,
 						contentType = contentType,
-						libraryCollectionType = libraryCollectionType,
-						api = apiClient,
-						apiClientFactory = apiClientFactory,
-						navigationRepository = navigationRepository
+						libraryCollectionType = libraryCollectionType
 					)
 				}
 			}

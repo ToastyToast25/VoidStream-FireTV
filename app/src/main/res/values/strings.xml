@@ -46,6 +46,8 @@
     <string name="because_you_watched">Because you watched %1$s</string>
     <string name="lbl_play_all">Play all</string>
     <string name="lbl_shuffle_all">Shuffle all</string>
+    <string name="shuffle_no_items_found">No items found to shuffle</string>
+    <string name="shuffle_error">Failed to shuffle. Please try again.</string>
     <string name="lbl_play">Play</string>
     <string name="lbl_pause">Pause</string>
     <string name="lbl_exit">Exit</string>

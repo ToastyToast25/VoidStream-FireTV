@@ -67,8 +67,8 @@ import org.jellyfin.androidtv.preference.UserSettingPreferences
 import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.preference.constant.ClockBehavior
 import org.jellyfin.androidtv.ui.settings.compat.SettingsViewModel
+import org.jellyfin.androidtv.ui.shuffle.ShuffleManager
 import org.jellyfin.androidtv.ui.shuffle.ShuffleOptionsDialog
-import org.jellyfin.androidtv.ui.shuffle.executeShuffle
 import org.jellyfin.androidtv.ui.syncplay.SyncPlayViewModel
 import org.jellyfin.androidtv.util.apiclient.getUrl
 import org.jellyfin.androidtv.util.apiclient.primaryImage
@@ -235,6 +235,7 @@ private fun MainToolbar(
 	val itemLauncher = koinInject<ItemLauncher>()
 	val api = koinInject<ApiClient>()
 	val apiClientFactory = koinInject<ApiClientFactory>()
+	val shuffleManager = koinInject<ShuffleManager>()
 	val settingsViewModel = koinActivityViewModel<SettingsViewModel>()
 	val syncPlayViewModel = koinActivityViewModel<SyncPlayViewModel>()
 	val activity = LocalActivity.current
@@ -242,6 +243,7 @@ private fun MainToolbar(
 	val scope = rememberCoroutineScope()
 
 	var showShuffleDialog by remember { mutableStateOf(false) }
+	val isShuffling by shuffleManager.isShuffling.collectAsState()
 
 	val activeButtonColors = ButtonDefaults.colors(
 		containerColor = JellyfinTheme.colorScheme.buttonActive,
@@ -375,19 +377,12 @@ private fun MainToolbar(
 				if (showShuffleButton) {
 					ExpandableIconButton(
 						icon = ImageVector.vectorResource(R.drawable.ic_shuffle),
-						label = "Shuffle",
+						label = if (isShuffling) "..." else "Shuffle",
 						onClick = {
-							scope.launch {
-								executeShuffle(
-									libraryId = null,
-									serverId = null,
-									genreName = null,
-									contentType = shuffleContentType,
-									libraryCollectionType = null,
-									api = api,
-									apiClientFactory = apiClientFactory,
-									navigationRepository = navigationRepository
-								)
+							if (!isShuffling) {
+								kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+									shuffleManager.quickShuffle(context)
+								}
 							}
 						},
 						onLongClick = { showShuffleDialog = true },
@@ -493,16 +488,14 @@ private fun MainToolbar(
 			onDismiss = { showShuffleDialog = false },
 			onShuffle = { libraryId, serverId, genreName, contentType, libraryCollectionType ->
 				showShuffleDialog = false
-				scope.launch {
-					executeShuffle(
+				kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+					shuffleManager.shuffle(
+						context = context,
 						libraryId = libraryId,
 						serverId = serverId,
 						genreName = genreName,
 						contentType = contentType,
-						libraryCollectionType = libraryCollectionType,
-						api = api,
-						apiClientFactory = apiClientFactory,
-						navigationRepository = navigationRepository
+						libraryCollectionType = libraryCollectionType
 					)
 				}
 			}

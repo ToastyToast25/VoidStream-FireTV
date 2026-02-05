@@ -891,6 +891,7 @@ public class FullDetailsFragment extends Fragment implements RecordingIndicatorV
                         if (mBaseItem.getType() == BaseItemKind.GENRE) {
                             java.util.UUID serverId = org.jellyfin.androidtv.util.UUIDUtils.parseUUID(mBaseItem.getServerId());
                             org.jellyfin.androidtv.ui.shuffle.ShuffleUtilsKt.executeGenreShuffle(
+                                requireContext(),
                                 mBaseItem.getName(),
                                 mBaseItem.getParentId(),
                                 serverId,
