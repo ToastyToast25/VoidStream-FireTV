@@ -160,7 +160,7 @@ class HomeFragment : Fragment() {
 		val isFocused = mediaBarViewModel.isFocused.value
 		val selectedPosition = rowsFragment?.selectedPositionFlow?.value ?: -1
 		
-		// Check if the media bar is enabled in Moonfin settings
+		// Check if the media bar is enabled in Voidfin settings
 		val isMediaBarEnabled = userSettingPreferences[UserSettingPreferences.mediaBarEnabled]
 		
 		// Determine if we should show media bar content

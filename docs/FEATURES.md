@@ -1,6 +1,6 @@
-# Moonfin-Exclusive Settings
+# Voidfin-Exclusive Settings
 
-Settings unique to Moonfin that are **not available in upstream Jellyfin AndroidTV**.
+Settings unique to Voidfin that are **not available in upstream Jellyfin AndroidTV**.
 
 > **Legend:**  
 > ⚠️ Requires Special Action/Input
@@ -181,13 +181,13 @@ Fine-tuning for synchronized playback sessions.
  *Settings → Support & Updates*
 
 - **Check for Updates**  ⚠️
-  - Manually check for new Moonfin versions
+  - Manually check for new Voidfin versions
   - Download and install APK updates directly
   - View release notes before updating
   - ⚠️ Requires "Install Unknown Apps" permission on Android 8+
 - **Update Notifications** 
   - Show notification on app launch when updates are available
-- **Support Moonfin** 
+- **Support Voidfin** 
   - Donation links and ways to contribute
 
 ---

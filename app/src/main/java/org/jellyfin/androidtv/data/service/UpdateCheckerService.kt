@@ -32,8 +32,8 @@ class UpdateCheckerService(private val context: Context) {
 	}
 
 	companion object {
-		private const val GITHUB_OWNER = "Moonfin-Client"
-		private const val GITHUB_REPO = "AndroidTV-FireTV"
+		private const val GITHUB_OWNER = "ToastyToast25"
+		private const val GITHUB_REPO = "Voidfin-FireTV"
 		private const val GITHUB_API_URL = "https://api.github.com/repos/$GITHUB_OWNER/$GITHUB_REPO/releases/latest"
 	}
 

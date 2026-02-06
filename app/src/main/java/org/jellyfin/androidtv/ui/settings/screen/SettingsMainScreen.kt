@@ -144,7 +144,7 @@ fun SettingsMainScreen() {
 					)
 				},
 				headingContent = { Text("Check for Updates") },
-				captionContent = { Text("Download latest Moonfin version") },
+				captionContent = { Text("Download latest Voidfin version") },
 				onClick = {
 					checkForUpdates(context, updateChecker)
 				}
@@ -170,7 +170,7 @@ fun SettingsMainScreen() {
 						tint = Color.Red
 					)
 				},
-				headingContent = { Text("Support Moonfin") },
+				headingContent = { Text("Support Voidfin") },
 				captionContent = { Text("Help us continue development") },
 				onClick = {
 					showDonateDialog(context)
