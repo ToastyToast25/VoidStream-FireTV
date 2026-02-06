@@ -6,6 +6,8 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import android.webkit.WebView
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -37,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -84,7 +87,6 @@ class ForceUpdateFragment : Fragment() {
 		JellyfinTheme {
 			ForceUpdateScreen(
 				version = arguments?.getString(ARG_VERSION) ?: "",
-				downloadUrl = arguments?.getString(ARG_DOWNLOAD_URL) ?: "",
 				apkSize = arguments?.getLong(ARG_APK_SIZE) ?: 0L,
 				releaseNotes = arguments?.getString(ARG_RELEASE_NOTES) ?: "",
 				onDownloadAndInstall = { onProgress ->
@@ -144,10 +146,73 @@ private enum class UpdateState {
 	FAILED
 }
 
+private fun showReleaseNotesDialog(context: android.content.Context, version: String, releaseNotes: String) {
+	val webView = WebView(context).apply {
+		layoutParams = LinearLayout.LayoutParams(
+			ViewGroup.LayoutParams.MATCH_PARENT,
+			(context.resources.displayMetrics.heightPixels * 0.7).toInt()
+		)
+		settings.apply {
+			javaScriptEnabled = false
+			defaultTextEncodingName = "utf-8"
+		}
+
+		val htmlContent = buildString {
+			append("<!DOCTYPE html><html><head>")
+			append("<meta name='viewport' content='width=device-width, initial-scale=1.0'>")
+			append("<style>")
+			append("body { font-family: sans-serif; padding: 16px; background-color: #1a1212; color: #e0e0e0; margin: 0; }")
+			append("h1, h2, h3 { color: #ffffff; margin-top: 16px; margin-bottom: 8px; }")
+			append("h1 { font-size: 1.5em; } h2 { font-size: 1.3em; } h3 { font-size: 1.1em; }")
+			append("p { margin: 8px 0; line-height: 1.5; }")
+			append("ul, ol { margin: 8px 0; padding-left: 24px; line-height: 1.6; }")
+			append("li { margin: 4px 0; }")
+			append("code { background-color: #2d1a1a; padding: 2px 6px; border-radius: 3px; font-family: monospace; color: #f0f0f0; }")
+			append("pre { background-color: #2d1a1a; padding: 12px; border-radius: 4px; overflow-x: auto; }")
+			append("a { color: #e04444; text-decoration: none; }")
+			append("strong { color: #ffffff; }")
+			append("hr { border: none; border-top: 1px solid #3a1a1a; margin: 16px 0; }")
+			append("</style></head><body>")
+			append("<h2>Version $version</h2><hr>")
+
+			val processed = releaseNotes
+				.replace("### ", "<h3>")
+				.replace("## ", "<h2>")
+				.replace("# ", "<h1>")
+				.replace(Regex("^- (.+)", RegexOption.MULTILINE), "<li>$1</li>")
+				.replace(Regex("^\\* (.+)", RegexOption.MULTILINE), "<li>$1</li>")
+				.replace(Regex("\\*\\*(.+?)\\*\\*"), "<strong>$1</strong>")
+				.replace(Regex("`(.+?)`"), "<code>$1</code>")
+				.replace("\n\n", "</p><p>")
+			append(processed)
+			append("</body></html>")
+		}
+
+		loadDataWithBaseURL(null, htmlContent, "text/html", "utf-8", null)
+	}
+
+	val container = LinearLayout(context).apply {
+		orientation = LinearLayout.VERTICAL
+		setPadding(48, 24, 48, 24)
+		addView(webView)
+	}
+
+	androidx.appcompat.app.AlertDialog.Builder(context)
+		.setTitle("Release Notes")
+		.setView(container)
+		.setPositiveButton("Close", null)
+		.show()
+		.apply {
+			window?.setLayout(
+				(context.resources.displayMetrics.widthPixels * 0.85).toInt(),
+				ViewGroup.LayoutParams.WRAP_CONTENT
+			)
+		}
+}
+
 @Composable
 private fun ForceUpdateScreen(
 	version: String,
-	downloadUrl: String,
 	apkSize: Long,
 	releaseNotes: String,
 	onDownloadAndInstall: suspend ((Float) -> Unit) -> Boolean,
@@ -155,6 +220,7 @@ private fun ForceUpdateScreen(
 	var state by remember { mutableStateOf(UpdateState.READY) }
 	var progress by remember { mutableFloatStateOf(0f) }
 	val scope = rememberCoroutineScope()
+	val context = LocalContext.current
 
 	val sizeMB = String.format("%.1f", apkSize / (1024.0 * 1024.0))
 
@@ -185,12 +251,12 @@ private fun ForceUpdateScreen(
 				modifier = Modifier
 					.width(480.dp)
 					.background(
-						color = Color(0xFF1A1A2E),
+						color = Color(0xFF1A1212),
 						shape = RoundedCornerShape(16.dp)
 					)
 					.border(
 						width = 1.dp,
-						color = Color(0xFF2A2A4A),
+						color = Color(0xFF3A1A1A),
 						shape = RoundedCornerShape(16.dp)
 					)
 					.padding(32.dp)
@@ -238,8 +304,8 @@ private fun ForceUpdateScreen(
 						modifier = Modifier
 							.fillMaxWidth()
 							.height(8.dp),
-						color = Color(0xFFAA5CC3),
-						trackColor = Color(0xFF2A2A4A),
+						color = Color(0xFFCC3333),
+						trackColor = Color(0xFF3A1A1A),
 					)
 					Spacer(modifier = Modifier.height(4.dp))
 					Text(
@@ -253,7 +319,7 @@ private fun ForceUpdateScreen(
 				if (state == UpdateState.INSTALLING) {
 					Text(
 						text = stringResource(R.string.force_update_installing),
-						color = Color(0xFFAA5CC3),
+						color = Color(0xFFCC3333),
 						fontSize = 16.sp,
 						fontWeight = FontWeight.Medium,
 					)
@@ -279,15 +345,19 @@ private fun ForceUpdateScreen(
 					},
 					enabled = state == UpdateState.READY || state == UpdateState.FAILED,
 					colors = ButtonDefaults.buttonColors(
-						containerColor = if (updateButtonFocused) Color(0xFFBB6DD4) else Color(0xFFAA5CC3),
+						containerColor = if (updateButtonFocused) Color(0xFFE04444) else Color(0xFFCC3333),
 						contentColor = Color.White,
-						disabledContainerColor = Color(0xFF3A3A5A),
+						disabledContainerColor = Color(0xFF3A2020),
 						disabledContentColor = Color(0xFF808080),
 					),
 					shape = RoundedCornerShape(8.dp),
 					modifier = Modifier
 						.fillMaxWidth()
 						.height(48.dp)
+						.then(
+							if (updateButtonFocused) Modifier.border(2.dp, Color.White, RoundedCornerShape(8.dp))
+							else Modifier
+						)
 						.onFocusChanged { updateButtonFocused = it.isFocused }
 						.focusable(),
 				) {
@@ -308,13 +378,20 @@ private fun ForceUpdateScreen(
 					Spacer(modifier = Modifier.height(8.dp))
 					var notesButtonFocused by remember { mutableStateOf(false) }
 					TextButton(
-						onClick = { /* Release notes handled by parent activity dialog */ },
+						onClick = {
+							showReleaseNotesDialog(context, version, releaseNotes)
+						},
 						colors = ButtonDefaults.textButtonColors(
-							contentColor = if (notesButtonFocused) Color(0xFFBB6DD4) else Color(0xFFAA5CC3),
+							contentColor = if (notesButtonFocused) Color.White else Color(0xFFCC3333),
 						),
+						shape = RoundedCornerShape(8.dp),
 						modifier = Modifier
 							.fillMaxWidth()
 							.height(40.dp)
+							.then(
+								if (notesButtonFocused) Modifier.border(2.dp, Color(0xFFCC3333), RoundedCornerShape(8.dp))
+								else Modifier
+							)
 							.onFocusChanged { notesButtonFocused = it.isFocused }
 							.focusable(),
 					) {
