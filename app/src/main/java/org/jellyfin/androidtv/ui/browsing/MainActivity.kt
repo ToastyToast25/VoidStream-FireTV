@@ -8,7 +8,6 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentActivity
@@ -27,7 +26,6 @@ import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.repository.SessionRepositoryState
 import org.jellyfin.androidtv.auth.repository.UserRepository
-import org.jellyfin.androidtv.data.service.UpdateCheckerService
 import org.jellyfin.androidtv.data.syncplay.SyncPlayManager
 import org.jellyfin.androidtv.databinding.ActivityMainBinding
 import org.jellyfin.androidtv.integration.LeanbackChannelWorker
@@ -54,7 +52,6 @@ class MainActivity : FragmentActivity() {
 	private val userRepository by inject<UserRepository>()
 	private val interactionTrackerViewModel by viewModel<InteractionTrackerViewModel>()
 	private val workManager by inject<WorkManager>()
-	private val updateCheckerService by inject<UpdateCheckerService>()
 	private val userPreferences by inject<UserPreferences>()
 	private val themeMusicPlayer by inject<ThemeMusicPlayer>()
 	private val syncPlayManager by inject<SyncPlayManager>()
@@ -167,36 +164,9 @@ class MainActivity : FragmentActivity() {
 	}
 
 	private fun checkForUpdatesOnLaunch() {
-		// Check if update notifications are enabled
-		if (!userPreferences[UserPreferences.updateNotificationsEnabled]) {
-			Timber.d("Update notifications are disabled")
-			return
-		}
-
-		lifecycleScope.launch(Dispatchers.IO) {
-			try {
-				val result = updateCheckerService.checkForUpdate()
-				result.onSuccess { updateInfo ->
-					if (updateInfo != null && updateInfo.isNewer) {
-						// Show toast on main thread
-						launch(Dispatchers.Main) {
-							Toast.makeText(
-								this@MainActivity,
-								"Update available: ${updateInfo.version}",
-								Toast.LENGTH_LONG
-							).show()
-						}
-						Timber.i("Update available: ${updateInfo.version}")
-					} else {
-						Timber.d("No updates available")
-					}
-				}.onFailure { error ->
-					Timber.e(error, "Failed to check for updates")
-				}
-			} catch (e: Exception) {
-				Timber.e(e, "Error checking for updates on launch")
-			}
-		}
+		// Forced update check is now handled in StartupActivity before reaching MainActivity.
+		// This method is kept as a no-op for backwards compatibility.
+		Timber.d("Update check handled by StartupActivity forced update flow")
 	}
 
 	override fun onPause() {

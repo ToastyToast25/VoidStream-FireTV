@@ -36,6 +36,8 @@ import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
 import org.jellyfin.androidtv.ui.navigation.Destinations
 import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.MediaManager
+import org.jellyfin.androidtv.data.service.UpdateCheckerService
+import org.jellyfin.androidtv.ui.startup.fragment.ForceUpdateFragment
 import org.jellyfin.androidtv.ui.startup.fragment.SelectServerFragment
 import org.jellyfin.androidtv.ui.startup.fragment.ServerFragment
 import org.jellyfin.androidtv.ui.startup.fragment.SplashFragment
@@ -63,6 +65,7 @@ class StartupActivity : FragmentActivity() {
 	private val userRepository: UserRepository by inject()
 	private val navigationRepository: NavigationRepository by inject()
 	private val itemLauncher: ItemLauncher by inject()
+	private val updateCheckerService: UpdateCheckerService by inject()
 
 	private lateinit var binding: ActivityStartupBinding
 
@@ -141,6 +144,25 @@ class StartupActivity : FragmentActivity() {
 		// Start session
 		(application as? JellyfinApplication)?.onSessionStart()
 
+		// Check for forced update before proceeding
+		try {
+			val updateResult = withContext(Dispatchers.IO) {
+				updateCheckerService.checkForUpdate()
+			}
+			val updateInfo = updateResult.getOrNull()
+			if (updateInfo != null && updateInfo.isNewer) {
+				Timber.i("Forced update required: current -> ${updateInfo.version}")
+				showForceUpdate(updateInfo)
+				return
+			}
+		} catch (e: Exception) {
+			Timber.e(e, "Failed to check for updates on startup, proceeding normally")
+		}
+
+		proceedToMainActivity(itemId, itemIsUserView)
+	}
+
+	private suspend fun proceedToMainActivity(itemId: UUID?, itemIsUserView: Boolean) {
 		// Create destination
 		val destination = when {
 			// Search is requested
@@ -170,6 +192,13 @@ class StartupActivity : FragmentActivity() {
 		Timber.i("Opening next activity $intent")
 		startActivity(intent)
 		finishAfterTransition()
+	}
+
+	private fun showForceUpdate(updateInfo: UpdateCheckerService.UpdateInfo) {
+		Timber.i("Showing forced update screen for version ${updateInfo.version}")
+		supportFragmentManager.commit {
+			replace(R.id.content_view, ForceUpdateFragment.newInstance(updateInfo))
+		}
 	}
 
 	// Fragment switching
