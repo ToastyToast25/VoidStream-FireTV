@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -98,9 +99,9 @@ fun ShuffleOptionsDialog(
 		title = {
 			androidx.compose.material3.Text(
 				when (mode) {
-					ShuffleMode.MAIN -> "Shuffle By"
-					ShuffleMode.LIBRARIES -> "Select Library"
-					ShuffleMode.GENRES -> "Select Genre"
+					ShuffleMode.MAIN -> stringResource(R.string.shuffle_by)
+					ShuffleMode.LIBRARIES -> stringResource(R.string.shuffle_select_library)
+					ShuffleMode.GENRES -> stringResource(R.string.shuffle_select_genre)
 				},
 				color = Color.Gray
 			)
@@ -130,7 +131,7 @@ fun ShuffleOptionsDialog(
 									modifier = Modifier.padding(end = 12.dp),
 									tint = LocalContentColor.current
 								)
-								androidx.compose.material3.Text("Library")
+								androidx.compose.material3.Text(stringResource(R.string.shuffle_library))
 							}
 						}
 						Button(
@@ -154,7 +155,7 @@ fun ShuffleOptionsDialog(
 									modifier = Modifier.padding(end = 12.dp),
 									tint = LocalContentColor.current
 								)
-								androidx.compose.material3.Text("Genre")
+								androidx.compose.material3.Text(stringResource(R.string.shuffle_genre))
 							}
 						}
 					}
@@ -219,13 +220,13 @@ fun ShuffleOptionsDialog(
 		confirmButton = {
 			if (mode != ShuffleMode.MAIN) {
 				TextButton(onClick = { mode = ShuffleMode.MAIN }) {
-					androidx.compose.material3.Text("Back")
+					androidx.compose.material3.Text(stringResource(R.string.lbl_back))
 				}
 			}
 		},
 		dismissButton = {
 			TextButton(onClick = onDismiss) {
-				androidx.compose.material3.Text("Cancel")
+				androidx.compose.material3.Text(stringResource(R.string.lbl_cancel))
 			}
 		}
 	)

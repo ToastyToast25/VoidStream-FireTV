@@ -13,6 +13,7 @@ import android.widget.CheckBox
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import org.jellyfin.androidtv.R
 
 class SeasonSelectionDialog(
 	context: Context,
@@ -42,7 +43,7 @@ class SeasonSelectionDialog(
 		}
 		
 		val titleText = TextView(context).apply {
-			text = "Select Seasons"
+			text = context.getString(R.string.season_select_title)
 			textSize = 20f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -72,7 +73,7 @@ class SeasonSelectionDialog(
 		
 		if (availableSeasons.isNotEmpty()) {
 			selectAllCheckbox = CheckBox(context).apply {
-				text = if (unavailableSeasons.isEmpty()) "Select All Seasons" else "Select All Available"
+				text = if (unavailableSeasons.isEmpty()) context.getString(R.string.season_select_all) else context.getString(R.string.season_select_all_available)
 				textSize = 15f
 				setTextColor(Color.WHITE)
 				isChecked = true
@@ -129,7 +130,7 @@ class SeasonSelectionDialog(
 		for (season in 1..numberOfSeasons) {
 			val isUnavailable = season in unavailableSeasons
 			val checkbox = CheckBox(context).apply {
-				text = if (isUnavailable) "Season $season (Already Requested)" else "Season $season"
+				text = if (isUnavailable) context.getString(R.string.season_already_requested, season) else context.getString(R.string.season_number, season)
 				textSize = 14f
 				setTextColor(if (isUnavailable) Color.parseColor("#6B7280") else Color.WHITE)
 				isChecked = !isUnavailable
@@ -171,7 +172,7 @@ class SeasonSelectionDialog(
 		}
 		
 		cancelButton = TextView(context).apply {
-			text = "Cancel"
+			text = context.getString(R.string.lbl_cancel)
 			textSize = 14f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -208,7 +209,7 @@ class SeasonSelectionDialog(
 		buttonsContainer.addView(cancelButton)
 		
 		confirmButton = TextView(context).apply {
-			text = "Request Selected"
+			text = context.getString(R.string.season_request_selected)
 			textSize = 14f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)

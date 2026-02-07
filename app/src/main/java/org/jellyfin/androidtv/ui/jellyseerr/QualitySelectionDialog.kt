@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
+import org.jellyfin.androidtv.R
 
 /**
  * Dialog for selecting request quality (HD or 4K)
@@ -43,7 +44,7 @@ class QualitySelectionDialog(
 		}
 		
 		val titleText = TextView(context).apply {
-			text = "Select Quality"
+			text = context.getString(R.string.quality_select_title)
 			textSize = 20f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -109,7 +110,7 @@ class QualitySelectionDialog(
 		rootContainer.addView(buttonsContainer)
 		
 		cancelButton = createButton(
-			text = "Cancel",
+			text = context.getString(R.string.lbl_cancel),
 			isEnabled = true,
 			isPrimary = false
 		) {
@@ -142,12 +143,12 @@ class QualitySelectionDialog(
 	private fun getQualityLabel(is4k: Boolean, status: Int?): String {
 		val qualityPrefix = if (is4k) "4K" else "HD"
 		return when (status) {
-			2 -> "$qualityPrefix (Pending)"
-			3 -> "$qualityPrefix (Processing)"
-			4 -> "Request More $qualityPrefix"
-			5 -> "$qualityPrefix (Available)"
-			6 -> "$qualityPrefix (Blacklisted)"
-			else -> "Request $qualityPrefix"
+			2 -> context.getString(R.string.quality_status_pending, qualityPrefix)
+			3 -> context.getString(R.string.quality_status_processing, qualityPrefix)
+			4 -> context.getString(R.string.quality_request_more, qualityPrefix)
+			5 -> context.getString(R.string.quality_status_available, qualityPrefix)
+			6 -> context.getString(R.string.quality_status_blacklisted, qualityPrefix)
+			else -> context.getString(R.string.quality_request, qualityPrefix)
 		}
 	}
 	

@@ -72,23 +72,23 @@ fun SyncPlayDialog(
             groupName = state.groupInfo?.groupName,
             groupState = state.groupState.name,
             participantCount = state.groupInfo?.participants?.size ?: 0,
-            availableGroups = availableGroups.map { GroupItem(it.groupId, it.groupName ?: "Unnamed Group", it.participants.size) },
+            availableGroups = availableGroups.map { GroupItem(it.groupId, it.groupName ?: context.getString(R.string.syncplay_unnamed_group), it.participants.size) },
             isLoading = isOperationInProgress,
             onCreateGroup = {
                 if (canStartOperation()) {
                     isOperationInProgress = true
                     coroutineScope.launch {
                         val userName = currentUser?.name
-                        val groupName = if (userName != null) "$userName's group" else "SyncPlay Group"
+                        val groupName = if (userName != null) context.getString(R.string.syncplay_group_default_name, userName) else context.getString(R.string.syncplay_default_group)
                         val result = syncPlayManager.createGroup(groupName)
                         if (result.isFailure) {
                             val error = result.exceptionOrNull()
                             val errorMessage = when {
                                 error is org.jellyfin.sdk.api.client.exception.InvalidStatusException && error.message?.contains("403") == true ->
-                                    "SyncPlay access denied. Enable SyncPlay permission for this user in Jellyfin server settings."
+                                    context.getString(R.string.syncplay_access_denied)
                                 error is org.jellyfin.sdk.api.client.exception.InvalidStatusException && error.message?.contains("401") == true ->
-                                    "Authentication error. Please sign out and sign in again."
-                                else -> "Failed to create group: ${error?.message ?: "Unknown error"}"
+                                    context.getString(R.string.syncplay_auth_error)
+                                else -> context.getString(R.string.syncplay_create_failed, error?.message ?: context.getString(R.string.syncplay_unknown_error))
                             }
                             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                                 android.widget.Toast.makeText(
@@ -103,7 +103,7 @@ fun SyncPlayDialog(
                                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                                     android.widget.Toast.makeText(
                                         context,
-                                        "Group created but connection timed out. Try refreshing the group list.",
+                                        context.getString(R.string.syncplay_create_timeout),
                                         android.widget.Toast.LENGTH_LONG
                                     ).show()
                                 }
@@ -125,7 +125,7 @@ fun SyncPlayDialog(
                             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                                 android.widget.Toast.makeText(
                                     context,
-                                    "Failed to join group: ${error?.message ?: "Unknown error"}",
+                                    context.getString(R.string.syncplay_join_failed, error?.message ?: context.getString(R.string.syncplay_unknown_error)),
                                     android.widget.Toast.LENGTH_LONG
                                 ).show()
                             }
@@ -135,7 +135,7 @@ fun SyncPlayDialog(
                                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                                     android.widget.Toast.makeText(
                                         context,
-                                        "Join request sent but connection timed out. The group may no longer exist.",
+                                        context.getString(R.string.syncplay_join_timeout),
                                         android.widget.Toast.LENGTH_LONG
                                     ).show()
                                 }
@@ -159,7 +159,7 @@ fun SyncPlayDialog(
                             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                                 android.widget.Toast.makeText(
                                     context,
-                                    "Failed to leave group: ${result.exceptionOrNull()?.message ?: "Unknown error"}",
+                                    context.getString(R.string.syncplay_leave_failed, result.exceptionOrNull()?.message ?: context.getString(R.string.syncplay_unknown_error)),
                                     android.widget.Toast.LENGTH_LONG
                                 ).show()
                             }

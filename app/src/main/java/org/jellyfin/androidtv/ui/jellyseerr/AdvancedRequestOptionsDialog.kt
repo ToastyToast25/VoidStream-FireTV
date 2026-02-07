@@ -17,6 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrQualityProfileDto
 import org.jellyfin.androidtv.data.service.jellyseerr.JellyseerrRootFolderDto
 import org.jellyfin.androidtv.util.dp
@@ -95,7 +96,7 @@ class AdvancedRequestOptionsDialog(
 		
 		// Title
 		val titleText = TextView(context).apply {
-			text = "Request Options"
+			text = context.getString(R.string.request_options_title)
 			textSize = 20f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -110,7 +111,7 @@ class AdvancedRequestOptionsDialog(
 		
 		// Subtitle with content title and quality
 		val subtitleText = TextView(context).apply {
-			val mediaType = if (isMovie) "Movie" else "TV Show"
+			val mediaType = if (isMovie) context.getString(R.string.request_options_movie) else context.getString(R.string.request_options_tv_show)
 			val quality = if (is4k) "4K" else "HD"
 			text = "$title ($quality $mediaType)"
 			textSize = 14f
@@ -162,7 +163,7 @@ class AdvancedRequestOptionsDialog(
 		
 		// Cancel button
 		cancelButton = TextView(context).apply {
-			text = "Cancel"
+			text = context.getString(R.string.lbl_cancel)
 			textSize = 14f
 			setTextColor(Color.WHITE)
 			setBackgroundColor(Color.parseColor("#374151")) // gray-700
@@ -190,7 +191,7 @@ class AdvancedRequestOptionsDialog(
 		
 		// Confirm button
 		confirmButton = TextView(context).apply {
-			text = "Request"
+			text = context.getString(R.string.lbl_request)
 			textSize = 14f
 			setTextColor(Color.WHITE)
 			setBackgroundColor(Color.parseColor("#7C3AED")) // purple-600
@@ -249,13 +250,13 @@ class AdvancedRequestOptionsDialog(
 						loadingIndicator.visibility = View.GONE
 						contentContainer.visibility = View.VISIBLE
 					} else {
-						showError("Failed to load server configuration")
+						showError(context.getString(R.string.request_options_load_failed))
 					}
 				}
 			} catch (e: Exception) {
 				Timber.e(e, "Failed to load server details")
 				withContext(Dispatchers.Main) {
-					showError("Error: ${e.message}")
+					showError(context.getString(R.string.request_options_error, e.message))
 				}
 			}
 		}
@@ -300,12 +301,12 @@ class AdvancedRequestOptionsDialog(
 		}
 		
 		// Quality Profile section
-		val profileSection = createSectionHeader("Quality Profile")
+		val profileSection = createSectionHeader(context.getString(R.string.request_options_quality_profile))
 		scrollContent.addView(profileSection)
 		
 		// Server Default option for profiles (id = null represents server default)
 		val defaultProfileButton = createOptionButton(
-			"Server Default",
+			context.getString(R.string.request_options_server_default),
 			isSelected = true,
 			isDefault = true
 		) {
@@ -333,7 +334,7 @@ class AdvancedRequestOptionsDialog(
 		scrollContent.addView(createSeparator())
 		
 		// Root Folder section
-		val rootFolderSection = createSectionHeader("Root Folder")
+		val rootFolderSection = createSectionHeader(context.getString(R.string.request_options_root_folder))
 		scrollContent.addView(rootFolderSection)
 		
 		// Find default root folder
@@ -341,7 +342,7 @@ class AdvancedRequestOptionsDialog(
 		
 		// Server Default option for root folders (id = null represents server default)
 		val defaultRootFolderButton = createOptionButton(
-			"Server Default" + (defaultRootFolder?.let { " (${getDisplayPath(it.path)})" } ?: ""),
+			context.getString(R.string.request_options_server_default) + (defaultRootFolder?.let { " (${getDisplayPath(it.path)})" } ?: ""),
 			isSelected = true,
 			isDefault = true
 		) {

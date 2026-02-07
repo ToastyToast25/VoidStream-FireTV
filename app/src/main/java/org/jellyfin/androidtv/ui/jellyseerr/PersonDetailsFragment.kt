@@ -270,11 +270,11 @@ class PersonDetailsFragment : Fragment() {
 		personDetails?.birthday?.let { birthday ->
 			val formattedDate = formatDate(birthday)
 			if (formattedDate != null) {
-				birthInfo.add("Born $formattedDate")
+				birthInfo.add(getString(R.string.media_born_date, formattedDate))
 			}
 		}
 		personDetails?.placeOfBirth?.let { place ->
-			birthInfo.add("in $place")
+			birthInfo.add(getString(R.string.media_born_place, place))
 		}
 
 		if (birthInfo.isNotEmpty()) {
@@ -297,7 +297,7 @@ class PersonDetailsFragment : Fragment() {
 		personDetails?.biography?.let { bio ->
 			if (bio.isNotBlank()) {
 				val bioHeading = TextView(requireContext()).apply {
-					text = "Biography"
+					text = getString(R.string.media_biography)
 					textSize = 20f
 					setTextColor(Color.WHITE)
 					setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -332,7 +332,7 @@ class PersonDetailsFragment : Fragment() {
 
 				// Toggle button
 				val toggleButton = TextView(requireContext()).apply {
-					text = "Show More"
+					text = getString(R.string.media_show_more)
 					textSize = 14f
 					setTextColor(Color.parseColor("#60A5FA")) // blue-400
 					setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -360,11 +360,11 @@ class PersonDetailsFragment : Fragment() {
 						if (isExpanded) {
 							bioText.maxLines = Integer.MAX_VALUE
 							bioText.ellipsize = null
-							text = "Show Less"
+							text = getString(R.string.media_show_less)
 						} else {
 							bioText.maxLines = maxCollapsedLines
 							bioText.ellipsize = android.text.TextUtils.TruncateAt.END
-							text = "Show More"
+							text = getString(R.string.media_show_more)
 						}
 					}
 				}
@@ -409,7 +409,7 @@ class PersonDetailsFragment : Fragment() {
 		}
 
 		val heading = TextView(requireContext()).apply {
-			text = "Appearances"
+			text = getString(R.string.media_appearances)
 			textSize = 22f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -505,7 +505,7 @@ class PersonDetailsFragment : Fragment() {
 		card.addView(imageContainer)
 
 		val titleText = TextView(requireContext()).apply {
-			text = item.title ?: item.name ?: "Unknown"
+			text = item.title ?: item.name ?: getString(R.string.media_unknown)
 			textSize = 14f
 			setTextColor(Color.WHITE)
 			maxLines = 2

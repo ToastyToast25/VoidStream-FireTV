@@ -1044,6 +1044,150 @@
     <string name="media_play_trailer">Play Trailer</string>
     <string name="media_not_in_library">Item not found in your VoidStream library</string>
     <string name="media_error_search_library">Error searching library</string>
+    <string name="media_unknown">Unknown</string>
+    <string name="media_overview">Overview</string>
+    <string name="media_overview_unavailable">Overview unavailable.</string>
+    <string name="media_cast">Cast</string>
+    <string name="media_no_cast">Cast information not available</string>
+    <string name="media_recommendations">Recommendations</string>
+    <string name="media_no_recommendations">No recommendations found</string>
+    <string name="media_similar_series">Similar Series</string>
+    <string name="media_similar_titles">Similar Titles</string>
+    <string name="media_no_similar">No similar titles found</string>
+    <string name="media_keywords">Keywords</string>
+    <string name="media_request_more">Request More</string>
+    <string name="media_cancel_request">Cancel Request</string>
+    <string name="media_watch_trailer">Watch Trailer</string>
+    <string name="media_play_in_voidstream">Play in VoidStream</string>
+    <string name="media_biography">Biography</string>
+    <string name="media_show_more">Show More</string>
+    <string name="media_show_less">Show Less</string>
+    <string name="media_appearances">Appearances</string>
+    <string name="media_born_date">Born %s</string>
+    <string name="media_born_place">in %s</string>
+
+    <!-- Media fact labels -->
+    <string name="media_fact_tmdb_score">TMDB Score</string>
+    <string name="media_fact_status">Status</string>
+    <string name="media_fact_first_air_date">First Air Date</string>
+    <string name="media_fact_last_air_date">Last Air Date</string>
+    <string name="media_fact_seasons">Seasons</string>
+    <string name="media_fact_release_date">Release Date</string>
+    <string name="media_fact_revenue">Revenue</string>
+    <string name="media_fact_runtime">Runtime</string>
+    <string name="media_runtime_min">%d min</string>
+    <string name="media_fact_budget">Budget</string>
+    <string name="media_fact_networks">Networks</string>
+
+    <string name="media_type_movies">movies</string>
+    <string name="media_type_tv_shows">TV shows</string>
+    <string name="media_no_server_configured">No Radarr/Sonarr server configured for %s in Jellyseerr</string>
+    <string name="media_no_quality_server">No %1$s server configured for %2$s in Jellyseerr. Please contact your administrator.</string>
+    <string name="media_request_success">%1$s request%2$s submitted successfully!</string>
+    <string name="media_request_all_seasons"> (All seasons)</string>
+    <string name="media_request_season_count"> (%d seasons)</string>
+    <string name="media_request_season_count_one"> (1 season)</string>
+    <string name="media_request_failed">Failed to request: %s</string>
+    <string name="media_request_error">Request failed: %s</string>
+    <string name="media_cancel_request_title">Cancel Request</string>
+    <string name="media_cancel_request_confirm">Cancel %1$s request for \"%2$s\"?</string>
+    <string name="media_cancel_requests_confirm">Cancel %1$s for \"%2$s\"?</string>
+    <string name="media_cancel_request_action">Cancel Request</string>
+    <string name="media_keep_request">Keep Request</string>
+    <string name="media_request_cancelled">Request cancelled</string>
+    <string name="media_requests_cancelled">%d requests cancelled</string>
+    <string name="media_cancel_failed">Failed to cancel request</string>
+    <string name="media_cancel_failed_plural">Failed to cancel requests</string>
+    <string name="media_cancel_partial">%1$d cancelled, %2$d failed</string>
+
+    <!-- Media status badges -->
+    <string name="media_status_hd_4k_declined">HD + 4K DECLINED</string>
+    <string name="media_status_4k_declined">4K DECLINED</string>
+    <string name="media_status_hd_declined">HD DECLINED</string>
+    <string name="media_status_hd_4k_blacklisted">HD + 4K BLACKLISTED</string>
+    <string name="media_status_4k_blacklisted">4K BLACKLISTED</string>
+    <string name="media_status_hd_blacklisted">HD BLACKLISTED</string>
+    <string name="media_status_hd_4k_available">HD + 4K AVAILABLE</string>
+    <string name="media_status_4k_available">4K AVAILABLE</string>
+    <string name="media_status_hd_available">HD AVAILABLE</string>
+    <string name="media_status_hd_4k_partial">HD + 4K PARTIAL</string>
+    <string name="media_status_4k_partial">4K PARTIAL</string>
+    <string name="media_status_hd_partial">HD PARTIAL</string>
+    <string name="media_status_hd_4k_processing">HD + 4K PROCESSING</string>
+    <string name="media_status_4k_processing">4K PROCESSING</string>
+    <string name="media_status_hd_processing">HD PROCESSING</string>
+    <string name="media_status_hd_4k_pending">HD + 4K PENDING</string>
+    <string name="media_status_4k_pending">4K PENDING</string>
+    <string name="media_status_hd_pending">HD PENDING</string>
+    <string name="media_status_hd_4k_unknown">HD + 4K UNKNOWN</string>
+    <string name="media_status_4k_unknown">4K UNKNOWN</string>
+    <string name="media_status_hd_unknown">HD UNKNOWN</string>
+    <string name="media_status_not_requested">NOT REQUESTED</string>
+
+    <!-- Media status labels (button text) -->
+    <string name="media_label_declined">Declined</string>
+    <string name="media_label_4k_declined">4K Declined</string>
+    <string name="media_label_hd_declined">HD Declined</string>
+    <string name="media_label_available">Available</string>
+    <string name="media_label_4k_available">4K Available</string>
+    <string name="media_label_hd_available">HD Available</string>
+    <string name="media_label_processing">Processing</string>
+    <string name="media_label_4k_processing">4K Processing</string>
+    <string name="media_label_hd_processing">HD Processing</string>
+    <string name="media_label_pending">Pending</string>
+    <string name="media_label_4k_pending">4K Pending</string>
+    <string name="media_label_hd_pending">HD Pending</string>
+    <string name="media_label_blacklisted">Blacklisted</string>
+    <string name="media_label_unavailable">Unavailable</string>
+
+    <string name="lbl_request">Request</string>
+
+    <!-- Request options dialog -->
+    <string name="request_options_title">Request Options</string>
+    <string name="request_options_movie">Movie</string>
+    <string name="request_options_tv_show">TV Show</string>
+    <string name="request_options_load_failed">Failed to load server configuration</string>
+    <string name="request_options_error">Error: %s</string>
+    <string name="request_options_quality_profile">Quality Profile</string>
+    <string name="request_options_root_folder">Root Folder</string>
+    <string name="request_options_server_default">Server Default</string>
+
+    <!-- Quality selection dialog -->
+    <string name="quality_select_title">Select Quality</string>
+    <string name="quality_status_pending">%s (Pending)</string>
+    <string name="quality_status_processing">%s (Processing)</string>
+    <string name="quality_request_more">Request More %s</string>
+    <string name="quality_status_available">%s (Available)</string>
+    <string name="quality_status_blacklisted">%s (Blacklisted)</string>
+    <string name="quality_request">Request %s</string>
+
+    <!-- Season selection dialog -->
+    <string name="season_select_title">Select Seasons</string>
+    <string name="season_select_all">Select All Seasons</string>
+    <string name="season_select_all_available">Select All Available</string>
+    <string name="season_already_requested">Season %d (Already Requested)</string>
+    <string name="season_number">Season %d</string>
+    <string name="season_request_selected">Request Selected</string>
+
+    <!-- Shuffle dialog -->
+    <string name="shuffle_by">Shuffle By</string>
+    <string name="shuffle_select_library">Select Library</string>
+    <string name="shuffle_select_genre">Select Genre</string>
+    <string name="shuffle_library">Library</string>
+    <string name="shuffle_genre">Genre</string>
+
+    <!-- SyncPlay dialog -->
+    <string name="syncplay_default_group">SyncPlay Group</string>
+    <string name="syncplay_unnamed_group">Unnamed Group</string>
+    <string name="syncplay_unknown_error">Unknown error</string>
+    <string name="syncplay_access_denied">SyncPlay access denied. Enable SyncPlay permission for this user in Jellyfin server settings.</string>
+    <string name="syncplay_auth_error">Authentication error. Please sign out and sign in again.</string>
+    <string name="syncplay_create_failed">Failed to create group: %s</string>
+    <string name="syncplay_create_timeout">Group created but connection timed out. Try refreshing the group list.</string>
+    <string name="syncplay_join_failed">Failed to join group: %s</string>
+    <string name="syncplay_join_timeout">Join request sent but connection timed out. The group may no longer exist.</string>
+    <string name="syncplay_leave_failed">Failed to leave group: %s</string>
+
     <string name="notification_channel_updates">App Updates</string>
     <string name="notification_channel_updates_description">Notifications about app updates</string>
     <string name="notification_update_available_title">Update Available</string>

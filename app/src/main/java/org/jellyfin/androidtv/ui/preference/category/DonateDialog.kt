@@ -22,7 +22,7 @@ fun showDonateDialog(context: Context) {
 	
 	AlertDialog.Builder(context)
 		.setView(dialogView)
-		.setPositiveButton("Close") { dialog, _ -> dialog.dismiss() }
+		.setPositiveButton(context.getString(R.string.lbl_close)) { dialog, _ -> dialog.dismiss() }
 		.create()
 		.show()
 }

@@ -312,7 +312,7 @@ class MediaDetailsFragment : Fragment() {
 		val title = when {
 			movieDetails != null -> movieDetails!!.title
 			tvDetails != null -> tvDetails!!.name
-			else -> selectedItem?.title ?: "Unknown"
+			else -> selectedItem?.title ?: getString(R.string.media_unknown)
 		}
 		
 		val year = when {
@@ -500,56 +500,56 @@ class MediaDetailsFragment : Fragment() {
 		// Determine what to show based on both statuses
 		val (statusText, bgColor) = when {
 			// Both HD and 4K declined
-			hdDeclined && fourKDeclined -> "HD + 4K DECLINED" to Color.parseColor("#EF4444") // red-500
+			hdDeclined && fourKDeclined -> getString(R.string.media_status_hd_4k_declined) to Color.parseColor("#EF4444")
 			// Only 4K declined
-			fourKDeclined -> "4K DECLINED" to Color.parseColor("#EF4444") // red-500
+			fourKDeclined -> getString(R.string.media_status_4k_declined) to Color.parseColor("#EF4444")
 			// Only HD declined
-			hdDeclined -> "HD DECLINED" to Color.parseColor("#EF4444") // red-500
-			
+			hdDeclined -> getString(R.string.media_status_hd_declined) to Color.parseColor("#EF4444")
+
 			// Both HD and 4K blacklisted
-			status == 6 && status4k == 6 -> "HD + 4K BLACKLISTED" to Color.parseColor("#DC2626") // red-600
+			status == 6 && status4k == 6 -> getString(R.string.media_status_hd_4k_blacklisted) to Color.parseColor("#DC2626")
 			// Only 4K blacklisted
-			status4k == 6 -> "4K BLACKLISTED" to Color.parseColor("#DC2626") // red-600
+			status4k == 6 -> getString(R.string.media_status_4k_blacklisted) to Color.parseColor("#DC2626")
 			// Only HD blacklisted
-			status == 6 -> "HD BLACKLISTED" to Color.parseColor("#DC2626") // red-600
-			
+			status == 6 -> getString(R.string.media_status_hd_blacklisted) to Color.parseColor("#DC2626")
+
 			// Both HD and 4K available
-			status == 5 && status4k == 5 -> "HD + 4K AVAILABLE" to Color.parseColor("#22C55E") // green-500
+			status == 5 && status4k == 5 -> getString(R.string.media_status_hd_4k_available) to Color.parseColor("#22C55E")
 			// Only 4K available
-			status4k == 5 -> "4K AVAILABLE" to Color.parseColor("#22C55E") // green-500
+			status4k == 5 -> getString(R.string.media_status_4k_available) to Color.parseColor("#22C55E")
 			// Only HD available
-			status == 5 -> "HD AVAILABLE" to Color.parseColor("#22C55E") // green-500
-			
+			status == 5 -> getString(R.string.media_status_hd_available) to Color.parseColor("#22C55E")
+
 			// Both HD and 4K partially available
-			status == 4 && status4k == 4 -> "HD + 4K PARTIAL" to Color.parseColor("#22C55E") // green-500
+			status == 4 && status4k == 4 -> getString(R.string.media_status_hd_4k_partial) to Color.parseColor("#22C55E")
 			// Only 4K partially available
-			status4k == 4 -> "4K PARTIAL" to Color.parseColor("#22C55E") // green-500
+			status4k == 4 -> getString(R.string.media_status_4k_partial) to Color.parseColor("#22C55E")
 			// Only HD partially available
-			status == 4 -> "HD PARTIAL" to Color.parseColor("#22C55E") // green-500
-			
+			status == 4 -> getString(R.string.media_status_hd_partial) to Color.parseColor("#22C55E")
+
 			// Both HD and 4K processing
-			status == 3 && status4k == 3 -> "HD + 4K PROCESSING" to Color.parseColor("#6366F1") // indigo-500
+			status == 3 && status4k == 3 -> getString(R.string.media_status_hd_4k_processing) to Color.parseColor("#6366F1")
 			// Only 4K processing
-			status4k == 3 -> "4K PROCESSING" to Color.parseColor("#6366F1") // indigo-500
+			status4k == 3 -> getString(R.string.media_status_4k_processing) to Color.parseColor("#6366F1")
 			// Only HD processing
-			status == 3 -> "HD PROCESSING" to Color.parseColor("#6366F1") // indigo-500
-			
+			status == 3 -> getString(R.string.media_status_hd_processing) to Color.parseColor("#6366F1")
+
 			// Both HD and 4K pending
-			status == 2 && status4k == 2 -> "HD + 4K PENDING" to Color.parseColor("#EAB308") // yellow-500
+			status == 2 && status4k == 2 -> getString(R.string.media_status_hd_4k_pending) to Color.parseColor("#EAB308")
 			// Only 4K pending
-			status4k == 2 -> "4K PENDING" to Color.parseColor("#EAB308") // yellow-500
+			status4k == 2 -> getString(R.string.media_status_4k_pending) to Color.parseColor("#EAB308")
 			// Only HD pending
-			status == 2 -> "HD PENDING" to Color.parseColor("#EAB308") // yellow-500
-			
+			status == 2 -> getString(R.string.media_status_hd_pending) to Color.parseColor("#EAB308")
+
 			// Both HD and 4K unknown
-			status == 1 && status4k == 1 -> "HD + 4K UNKNOWN" to Color.parseColor("#9CA3AF") // gray-400
+			status == 1 && status4k == 1 -> getString(R.string.media_status_hd_4k_unknown) to Color.parseColor("#9CA3AF")
 			// Only 4K unknown
-			status4k == 1 -> "4K UNKNOWN" to Color.parseColor("#9CA3AF") // gray-400
+			status4k == 1 -> getString(R.string.media_status_4k_unknown) to Color.parseColor("#9CA3AF")
 			// Only HD unknown
-			status == 1 -> "HD UNKNOWN" to Color.parseColor("#9CA3AF") // gray-400
-			
+			status == 1 -> getString(R.string.media_status_hd_unknown) to Color.parseColor("#9CA3AF")
+
 			// Not requested
-			else -> "NOT REQUESTED" to Color.parseColor("#6B7280") // gray-500
+			else -> getString(R.string.media_status_not_requested) to Color.parseColor("#6B7280")
 		}
 		
 		val badge = TextView(requireContext()).apply {
@@ -592,7 +592,7 @@ class MediaDetailsFragment : Fragment() {
 		val attributes = mutableListOf<String>()
 		
 		movieDetails?.runtime?.let { runtime ->
-			attributes.add("$runtime min")
+			attributes.add(getString(R.string.media_runtime_min, runtime))
 		}
 		
 		val genres = movieDetails?.genres?.take(3)?.map { it.name }
@@ -672,10 +672,10 @@ class MediaDetailsFragment : Fragment() {
 		// Determine the button label based on status
 		val requestLabel = when {
 			!canRequestAny -> getStatusLabel(hdStatus, status4k, hdDeclined, fourKDeclined)
-			hdStatus == 4 && status4k == 4 -> "Request More"
-			hdStatus == 4 -> "Request More"
-			status4k == 4 -> "Request More"
-			else -> "Request"
+			hdStatus == 4 && status4k == 4 -> getString(R.string.media_request_more)
+			hdStatus == 4 -> getString(R.string.media_request_more)
+			status4k == 4 -> getString(R.string.media_request_more)
+			else -> getString(R.string.lbl_request)
 		}
 
 		// Single Request button
@@ -707,7 +707,7 @@ class MediaDetailsFragment : Fragment() {
 		val pendingRequests = requests?.filter { it.status == JellyseerrRequestDto.STATUS_PENDING } ?: emptyList()
 		if (pendingRequests.isNotEmpty()) {
 			cancelRequestButton = TextUnderButton(requireContext()).apply {
-				setLabel("Cancel Request")
+				setLabel(getString(R.string.media_cancel_request))
 				setIcon(R.drawable.ic_delete)
 				setOnClickListener {
 					showCancelRequestDialog(pendingRequests)
@@ -727,7 +727,7 @@ class MediaDetailsFragment : Fragment() {
 
 		// Watch Trailer button
 		trailerButton = TextUnderButton(requireContext()).apply {
-			setLabel("Watch Trailer")
+			setLabel(getString(R.string.media_watch_trailer))
 			setIcon(R.drawable.ic_trailer)
 			setOnClickListener {
 				playTrailer()
@@ -747,7 +747,7 @@ class MediaDetailsFragment : Fragment() {
 		// Play in VoidStream button (only show if available in library)
 		if (hdStatus == 5 || hdStatus == 4) {
 			playInVoidStreamButton = TextUnderButton(requireContext()).apply {
-				setLabel("Play in VoidStream")
+				setLabel(getString(R.string.media_play_in_voidstream))
 				setIcon(R.drawable.ic_play)
 				setOnClickListener {
 					playInVoidStream()
@@ -772,20 +772,20 @@ class MediaDetailsFragment : Fragment() {
 	 */
 	private fun getStatusLabel(hdStatus: Int?, status4k: Int?, hdDeclined: Boolean, fourKDeclined: Boolean): String {
 		return when {
-			hdDeclined && fourKDeclined -> "Declined"
-			fourKDeclined -> "4K Declined"
-			hdDeclined -> "HD Declined"
-			hdStatus == 5 && status4k == 5 -> "Available"
-			status4k == 5 -> "4K Available"
-			hdStatus == 5 -> "HD Available"
-			hdStatus == 3 && status4k == 3 -> "Processing"
-			status4k == 3 -> "4K Processing"
-			hdStatus == 3 -> "HD Processing"
-			hdStatus == 2 && status4k == 2 -> "Pending"
-			status4k == 2 -> "4K Pending"
-			hdStatus == 2 -> "HD Pending"
-			hdStatus == 6 || status4k == 6 -> "Blacklisted"
-			else -> "Unavailable"
+			hdDeclined && fourKDeclined -> getString(R.string.media_label_declined)
+			fourKDeclined -> getString(R.string.media_label_4k_declined)
+			hdDeclined -> getString(R.string.media_label_hd_declined)
+			hdStatus == 5 && status4k == 5 -> getString(R.string.media_label_available)
+			status4k == 5 -> getString(R.string.media_label_4k_available)
+			hdStatus == 5 -> getString(R.string.media_label_hd_available)
+			hdStatus == 3 && status4k == 3 -> getString(R.string.media_label_processing)
+			status4k == 3 -> getString(R.string.media_label_4k_processing)
+			hdStatus == 3 -> getString(R.string.media_label_hd_processing)
+			hdStatus == 2 && status4k == 2 -> getString(R.string.media_label_pending)
+			status4k == 2 -> getString(R.string.media_label_4k_pending)
+			hdStatus == 2 -> getString(R.string.media_label_hd_pending)
+			hdStatus == 6 || status4k == 6 -> getString(R.string.media_label_blacklisted)
+			else -> getString(R.string.media_label_unavailable)
 		}
 	}
 	
@@ -796,15 +796,15 @@ class MediaDetailsFragment : Fragment() {
 		val item = selectedItem ?: return
 		val mediaType = item.mediaType ?: return
 		val title = when (mediaType) {
-			"movie" -> movieDetails?.title ?: item.title ?: item.name ?: "Unknown"
-			else -> tvDetails?.name ?: item.name ?: item.title ?: "Unknown"
+			"movie" -> movieDetails?.title ?: item.title ?: item.name ?: getString(R.string.media_unknown)
+			else -> tvDetails?.name ?: item.name ?: item.title ?: getString(R.string.media_unknown)
 		}
-		
+
 		lifecycleScope.launch {
 			val (userCan4k, has4kServer, hasHdServer) = checkQualityAvailability(mediaType)
 			val hdAvailable = canRequestHd && hasHdServer
 			val fourKAvailable = canRequest4k && userCan4k && has4kServer
-			
+
 			if (hdAvailable && fourKAvailable) {
 				// Both available - show quality selection dialog
 				val dialog = QualitySelectionDialog(
@@ -825,10 +825,10 @@ class MediaDetailsFragment : Fragment() {
 				requestContent(false)
 			} else {
 				if (!isAdded) return@launch
-				val mediaTypeName = if (mediaType == "movie") "movies" else "TV shows"
+				val mediaTypeName = if (mediaType == "movie") getString(R.string.media_type_movies) else getString(R.string.media_type_tv_shows)
 				Toast.makeText(
 					requireContext(),
-					"No Radarr/Sonarr server configured for $mediaTypeName in Jellyseerr",
+					getString(R.string.media_no_server_configured, mediaTypeName),
 					Toast.LENGTH_LONG
 				).show()
 			}
@@ -908,7 +908,7 @@ class MediaDetailsFragment : Fragment() {
 
 		// Overview heading
 		val overviewHeading = TextView(requireContext()).apply {
-			text = "Overview"
+			text = getString(R.string.media_overview)
 			textSize = 20f
 			setTextColor(Color.parseColor("#D1D5DB")) // gray-300
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -924,7 +924,7 @@ class MediaDetailsFragment : Fragment() {
 		val overview = movieDetails?.overview ?: tvDetails?.overview ?: selectedItem?.overview
 		val overviewText = TextView(requireContext()).apply {
 			val htmlText = overview?.toHtmlSpanned()
-			text = if (htmlText?.isNotEmpty() == true) htmlText else "Overview unavailable."
+			text = if (htmlText?.isNotEmpty() == true) htmlText else getString(R.string.media_overview_unavailable)
 			textSize = 14f
 			setTextColor(Color.parseColor("#9CA3AF")) // gray-400
 			layoutParams = LinearLayout.LayoutParams(
@@ -971,13 +971,13 @@ class MediaDetailsFragment : Fragment() {
 		// Add rating if available
 		val voteAverage = movieDetails?.voteAverage ?: tvDetails?.voteAverage ?: selectedItem?.voteAverage
 		if (voteAverage != null && voteAverage > 0) {
-			factRows.add("TMDB Score" to "${(voteAverage * 10).toInt()}%")
+			factRows.add(getString(R.string.media_fact_tmdb_score) to "${(voteAverage * 10).toInt()}%")
 		}
 
 		// Status
 		val status = movieDetails?.status ?: tvDetails?.status
 		if (status != null) {
-			factRows.add("Status" to status)
+			factRows.add(getString(R.string.media_fact_status) to status)
 		}
 
 		// TV Show specific fields
@@ -987,7 +987,7 @@ class MediaDetailsFragment : Fragment() {
 			currentTvDetails.firstAirDate?.let { date ->
 				val formattedDate = formatDate(date)
 				if (formattedDate != null) {
-					factRows.add("First Air Date" to formattedDate)
+					factRows.add(getString(R.string.media_fact_first_air_date) to formattedDate)
 				}
 			}
 			
@@ -995,13 +995,13 @@ class MediaDetailsFragment : Fragment() {
 			currentTvDetails.lastAirDate?.let { date ->
 				val formattedDate = formatDate(date)
 				if (formattedDate != null) {
-					factRows.add("Last Air Date" to formattedDate)
+					factRows.add(getString(R.string.media_fact_last_air_date) to formattedDate)
 				}
 			}
 			
 			// Number of Seasons
 			currentTvDetails.numberOfSeasons?.let { seasons ->
-				factRows.add("Seasons" to seasons.toString())
+				factRows.add(getString(R.string.media_fact_seasons) to seasons.toString())
 			}
 		}
 
@@ -1012,7 +1012,7 @@ class MediaDetailsFragment : Fragment() {
 			currentMovieDetails.releaseDate?.let { date ->
 				val formattedDate = formatDate(date)
 				if (formattedDate != null) {
-					factRows.add("Release Date" to formattedDate)
+					factRows.add(getString(R.string.media_fact_release_date) to formattedDate)
 				}
 			}
 			
@@ -1020,7 +1020,7 @@ class MediaDetailsFragment : Fragment() {
 			currentMovieDetails.revenue?.let { revenue ->
 				if (revenue > 0) {
 					val formattedRevenue = NumberFormat.getCurrencyInstance(Locale.US).format(revenue)
-					factRows.add("Revenue" to formattedRevenue)
+					factRows.add(getString(R.string.media_fact_revenue) to formattedRevenue)
 				}
 			}
 		}
@@ -1034,7 +1034,7 @@ class MediaDetailsFragment : Fragment() {
 			} else {
 				getString(R.string.runtime_minutes, minutes)
 			}
-			factRows.add("Runtime" to runtimeText)
+			factRows.add(getString(R.string.media_fact_runtime) to runtimeText)
 		}
 
 		// Budget (Movies only)
@@ -1043,7 +1043,7 @@ class MediaDetailsFragment : Fragment() {
 			currentMovieDetailsForBudget.budget?.let { budget ->
 				if (budget > 0) {
 					val formattedBudget = NumberFormat.getCurrencyInstance(Locale.US).format(budget)
-					factRows.add("Budget" to formattedBudget)
+					factRows.add(getString(R.string.media_fact_budget) to formattedBudget)
 				}
 			}
 		}
@@ -1051,7 +1051,7 @@ class MediaDetailsFragment : Fragment() {
 		// Networks (TV Shows only)
 		val studios = tvDetails?.networks?.take(3)?.map { it.name }
 		if (!studios.isNullOrEmpty()) {
-			factRows.add("Networks" to studios.joinToString(", "))
+			factRows.add(getString(R.string.media_fact_networks) to studios.joinToString(", "))
 		}
 		
 		// Add rows with appropriate corner radius
@@ -1138,7 +1138,7 @@ class MediaDetailsFragment : Fragment() {
 		castSection = container
 
 		val castHeading = TextView(requireContext()).apply {
-			text = "Cast"
+			text = getString(R.string.media_cast)
 			textSize = 24f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -1174,7 +1174,7 @@ class MediaDetailsFragment : Fragment() {
 			}
 			
 			castList.forEach { cast ->
-				val castCard = createCastCard(cast.id, cast.name ?: "Unknown", cast.character ?: "Unknown", cast.profilePath)
+				val castCard = createCastCard(cast.id, cast.name ?: getString(R.string.media_unknown), cast.character ?: getString(R.string.media_unknown), cast.profilePath)
 				castRow.addView(castCard)
 			}
 			
@@ -1184,7 +1184,7 @@ class MediaDetailsFragment : Fragment() {
 			requestButton?.nextFocusDownId = castRow.getChildAt(0)?.id ?: container.id
 		} else {
 			val noCast = TextView(requireContext()).apply {
-				text = "Cast information not available"
+				text = getString(R.string.media_no_cast)
 				textSize = 14f
 				setTextColor(Color.parseColor("#9CA3AF")) // gray-400
 				layoutParams = LinearLayout.LayoutParams(
@@ -1302,7 +1302,7 @@ class MediaDetailsFragment : Fragment() {
 		}
 
 		val recommendationsHeading = TextView(requireContext()).apply {
-			text = "Recommendations"
+			text = getString(R.string.media_recommendations)
 			textSize = 22f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -1360,7 +1360,7 @@ class MediaDetailsFragment : Fragment() {
 					container.addView(scrollView)
 				} else {
 					val noRecommendations = TextView(requireContext()).apply {
-						text = "No recommendations found"
+						text = getString(R.string.media_no_recommendations)
 						textSize = 14f
 						setTextColor(Color.parseColor("#9CA3AF"))
 						layoutParams = LinearLayout.LayoutParams(
@@ -1391,8 +1391,8 @@ class MediaDetailsFragment : Fragment() {
 
 		// Dynamic title based on media type
 		val similarTitle = when {
-			tvDetails != null -> "Similar Series"
-			else -> "Similar Titles"
+			tvDetails != null -> getString(R.string.media_similar_series)
+			else -> getString(R.string.media_similar_titles)
 		}
 
 		val similarHeading = TextView(requireContext()).apply {
@@ -1454,7 +1454,7 @@ class MediaDetailsFragment : Fragment() {
 					container.addView(scrollView)
 				} else {
 					val noSimilar = TextView(requireContext()).apply {
-						text = "No similar titles found"
+						text = getString(R.string.media_no_similar)
 						textSize = 14f
 						setTextColor(Color.parseColor("#9CA3AF"))
 						layoutParams = LinearLayout.LayoutParams(
@@ -1496,7 +1496,7 @@ class MediaDetailsFragment : Fragment() {
 		}
 
 		val keywordsHeading = TextView(requireContext()).apply {
-			text = "Keywords"
+			text = getString(R.string.media_keywords)
 			textSize = 22f
 			setTextColor(Color.WHITE)
 			setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -1662,7 +1662,7 @@ class MediaDetailsFragment : Fragment() {
 		card.addView(imageContainer)
 
 		val titleText = TextView(requireContext()).apply {
-			text = item.title ?: item.name ?: "Unknown"
+			text = item.title ?: item.name ?: getString(R.string.media_unknown)
 			textSize = 14f
 			setTextColor(Color.WHITE)
 			maxLines = 2
@@ -1713,8 +1713,8 @@ class MediaDetailsFragment : Fragment() {
 	private fun showAdvancedOptionsDialog(item: JellyseerrDiscoverItemDto, is4k: Boolean) {
 		val isMovie = item.mediaType == "movie"
 		val title = when {
-			isMovie -> movieDetails?.title ?: item.title ?: item.name ?: "Unknown"
-			else -> tvDetails?.name ?: item.name ?: item.title ?: "Unknown"
+			isMovie -> movieDetails?.title ?: item.title ?: item.name ?: getString(R.string.media_unknown)
+			else -> tvDetails?.name ?: item.name ?: item.title ?: getString(R.string.media_unknown)
 		}
 		
 		lifecycleScope.launch {
@@ -1734,10 +1734,10 @@ class MediaDetailsFragment : Fragment() {
 			if (!serverExists) {
 				if (!isAdded) return@launch
 				val quality = if (is4k) "4K" else "HD (1080p)"
-				val mediaType = if (isMovie) "movies" else "TV shows"
+				val mediaType = if (isMovie) getString(R.string.media_type_movies) else getString(R.string.media_type_tv_shows)
 				Toast.makeText(
 					requireContext(),
-					"No $quality server configured for $mediaType in Jellyseerr. Please contact your administrator.",
+					getString(R.string.media_no_quality_server, quality, mediaType),
 					Toast.LENGTH_LONG
 				).show()
 				return@launch
@@ -1823,7 +1823,7 @@ class MediaDetailsFragment : Fragment() {
 		// If it's a TV show, show season selection dialog
 		if (item.mediaType == "tv") {
 			val numberOfSeasons = tvDetails?.numberOfSeasons ?: 1
-			val showName = tvDetails?.name ?: item.name ?: item.title ?: "Unknown Show"
+			val showName = tvDetails?.name ?: item.name ?: item.title ?: getString(R.string.media_unknown)
 			
 			// Gather unavailable seasons (already requested or available for this quality)
 			val unavailableSeasons = getUnavailableSeasons(is4k)
@@ -1885,13 +1885,15 @@ class MediaDetailsFragment : Fragment() {
 				
 				result.onSuccess {
 					val quality = if (is4k) "4K" else "HD"
-					val seasonInfo = if (seasons != null) {
-						if (seasons.size == tvDetails?.numberOfSeasons) " (All seasons)"
-						else " (${seasons.size} season${if (seasons.size > 1) "s" else ""})"
-					} else ""
+					val seasonInfo = when {
+						seasons == null -> ""
+						seasons.size == tvDetails?.numberOfSeasons -> getString(R.string.media_request_all_seasons)
+						seasons.size == 1 -> getString(R.string.media_request_season_count_one)
+						else -> getString(R.string.media_request_season_count, seasons.size)
+					}
 					Toast.makeText(
 						requireContext(),
-						"$quality request$seasonInfo submitted successfully!",
+						getString(R.string.media_request_success, quality, seasonInfo),
 						Toast.LENGTH_SHORT
 					).show()
 					// Refresh details to update status
@@ -1899,7 +1901,7 @@ class MediaDetailsFragment : Fragment() {
 				}.onFailure { error ->
 					Toast.makeText(
 						requireContext(),
-						"Failed to request: ${error.message}",
+						getString(R.string.media_request_failed, error.message ?: ""),
 						Toast.LENGTH_LONG
 					).show()
 				}
@@ -1909,7 +1911,7 @@ class MediaDetailsFragment : Fragment() {
 				if (isAdded) {
 					Toast.makeText(
 						requireContext(),
-						"Request failed: ${e.message}",
+						getString(R.string.media_request_error, e.message ?: ""),
 						Toast.LENGTH_LONG
 					).show()
 				}
@@ -1925,31 +1927,31 @@ class MediaDetailsFragment : Fragment() {
 		
 		val item = selectedItem ?: return
 		val title = when (item.mediaType) {
-			"movie" -> movieDetails?.title ?: item.title ?: item.name ?: "Unknown"
-			else -> tvDetails?.name ?: item.name ?: item.title ?: "Unknown"
+			"movie" -> movieDetails?.title ?: item.title ?: item.name ?: getString(R.string.media_unknown)
+			else -> tvDetails?.name ?: item.name ?: item.title ?: getString(R.string.media_unknown)
 		}
-		
+
 		// Build description of what will be cancelled
 		val description = if (pendingRequests.size == 1) {
 			val req = pendingRequests.first()
 			val quality = if (req.is4k) "4K" else "HD"
-			"Cancel $quality request for \"$title\"?"
+			getString(R.string.media_cancel_request_confirm, quality, title)
 		} else {
 			val hdCount = pendingRequests.count { !it.is4k }
 			val fourKCount = pendingRequests.count { it.is4k }
 			val parts = mutableListOf<String>()
 			if (hdCount > 0) parts.add("$hdCount HD")
 			if (fourKCount > 0) parts.add("$fourKCount 4K")
-			"Cancel ${parts.joinToString(" and ")} request${if (pendingRequests.size > 1) "s" else ""} for \"$title\"?"
+			getString(R.string.media_cancel_requests_confirm, parts.joinToString(" & "), title)
 		}
-		
+
 		android.app.AlertDialog.Builder(requireContext())
-			.setTitle("Cancel Request")
+			.setTitle(getString(R.string.media_cancel_request_title))
 			.setMessage(description)
-			.setPositiveButton("Cancel Request") { _, _ ->
+			.setPositiveButton(getString(R.string.media_cancel_request_action)) { _, _ ->
 				cancelPendingRequests(pendingRequests)
 			}
-			.setNegativeButton("Keep Request", null)
+			.setNegativeButton(getString(R.string.media_keep_request), null)
 			.show()
 	}
 	
@@ -1976,10 +1978,10 @@ class MediaDetailsFragment : Fragment() {
 				if (!isAdded) return@launch
 				
 				val message = when {
-					failCount == 0 && successCount == 1 -> "Request cancelled"
-					failCount == 0 -> "$successCount requests cancelled"
-					successCount == 0 -> "Failed to cancel request${if (failCount > 1) "s" else ""}"
-					else -> "$successCount cancelled, $failCount failed"
+					failCount == 0 && successCount == 1 -> getString(R.string.media_request_cancelled)
+					failCount == 0 -> getString(R.string.media_requests_cancelled, successCount)
+					successCount == 0 -> if (failCount > 1) getString(R.string.media_cancel_failed_plural) else getString(R.string.media_cancel_failed)
+					else -> getString(R.string.media_cancel_partial, successCount, failCount)
 				}
 				
 				Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
@@ -1991,7 +1993,7 @@ class MediaDetailsFragment : Fragment() {
 				if (isAdded) {
 					Toast.makeText(
 						requireContext(),
-						"Error: ${e.message}",
+						getString(R.string.request_options_error, e.message ?: ""),
 						Toast.LENGTH_LONG
 					).show()
 				}
@@ -2008,7 +2010,7 @@ class MediaDetailsFragment : Fragment() {
 			item.mediaType == "movie" -> item.releaseDate?.take(4)
 			else -> item.firstAirDate?.take(4)
 		}
-		val title = item.title ?: item.name ?: "Unknown"
+		val title = item.title ?: item.name ?: getString(R.string.media_unknown)
 		val searchQuery = "$title ${year ?: ""} official trailer"
 		
 		try {
