@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
+import org.jellyfin.androidtv.BuildConfig
 import org.jellyfin.androidtv.JellyfinApplication
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.SessionRepository
@@ -112,12 +113,14 @@ class StartupActivity : FragmentActivity() {
 
 	private fun onPermissionsGranted() {
 		lifecycleScope.launch {
-			// Show "What's New" if we just updated
-			showWhatsNewIfPending()
+			// OTA update features — only for sideloaded builds
+			if (!BuildConfig.IS_AMAZON_BUILD && !BuildConfig.IS_GOOGLE_PLAY_BUILD) {
+				// Show "What's New" if we just updated via OTA
+				showWhatsNewIfPending()
 
-			// Check for updates (forced or optional)
-			val updateBlocking = checkForForcedUpdate()
-			if (updateBlocking) return@launch
+				val updateBlocking = checkForForcedUpdate()
+				if (updateBlocking) return@launch
+			}
 
 			// No blocking update, proceed with normal session flow
 			startSessionFlow()

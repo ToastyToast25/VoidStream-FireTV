@@ -101,11 +101,111 @@ keytool -list -v -keystore release.keystore -alias voidstream
 
 **IMPORTANT:** Back up `release.keystore` securely. If lost, you cannot update any APK signed with it.
 
-## Publishing an OTA Update
+## Build Flavors (Distribution)
 
-Complete steps to bump version, build, push, and create a GitHub release.
+VoidStream uses Gradle **product flavors** to produce separate builds for different distribution channels. A single `distribution` flavor dimension controls which features are enabled.
 
-### 1. Bump Version
+### Available Flavors
+
+| Flavor | Purpose | OTA Updates | Donate Button | Install Permission | Build Command |
+|--------|---------|-------------|---------------|--------------------|---------------|
+| **`github`** | Sideloaded builds (GitHub Releases) | Yes | Yes | Yes | `./gradlew assembleGithubRelease` |
+| **`amazon`** | Amazon Appstore submission | No | No | No | `./gradlew assembleAmazonRelease` |
+| **`googleplay`** | Google Play Store (Shield, Chromecast, etc.) | No | No | No | `./gradlew assembleGoogleplayRelease` |
+
+### APK / AAB Output Locations
+
+```
+app/build/outputs/apk/github/release/voidstream-androidtv-v{VERSION}-github-release.apk
+app/build/outputs/apk/amazon/release/voidstream-androidtv-v{VERSION}-amazon-release.apk
+app/build/outputs/apk/googleplay/release/voidstream-androidtv-v{VERSION}-googleplay-release.apk
+app/build/outputs/bundle/googleplayRelease/voidstream-androidtv-v{VERSION}-googleplay-release.aab
+```
+
+Google Play requires AAB format for store submission. Use `./gradlew bundleGoogleplayRelease` to build the AAB. APK builds are still available for local testing.
+
+### How the Gating System Works
+
+Features are gated using **two mechanisms**:
+
+**1. BuildConfig flags (runtime gating)**
+
+Two separate compile-time boolean constants are set per flavor in `app/build.gradle.kts`:
+
+| Flavor | `IS_AMAZON_BUILD` | `IS_GOOGLE_PLAY_BUILD` |
+|--------|-------------------|------------------------|
+| `github` | `false` | `false` |
+| `amazon` | `true` | `false` |
+| `googleplay` | `false` | `true` |
+
+Amazon and Google Play have **separate flags** because they have different payment systems and store policies that may diverge in the future (Amazon IAP vs Google Play Billing).
+
+Code uses `if (!BuildConfig.IS_AMAZON_BUILD && !BuildConfig.IS_GOOGLE_PLAY_BUILD) { ... }` to gate features that are only available on sideloaded (github) builds. This gates:
+- OTA update check on startup (`StartupActivity.kt`)
+- "What's New" dialog after OTA update (`StartupActivity.kt`)
+- Forced update screen (`StartupActivity.kt`)
+- Background update worker scheduling (`JellyfinApplication.kt`)
+- UpdateCheckerService DI registration (`AppModule.kt`)
+- "Check for Updates" button in Settings (`SettingsMainScreen.kt`)
+- "Update Notifications" toggle in Settings (`SettingsMainScreen.kt`)
+- "Beta Updates" toggle in Settings (`SettingsMainScreen.kt`)
+- "Support VoidStream" donate button in Settings (`SettingsMainScreen.kt`)
+- Update overlay in Settings (`SettingsMainScreen.kt`)
+
+Use `BuildConfig.IS_AMAZON_BUILD` or `BuildConfig.IS_GOOGLE_PLAY_BUILD` individually for store-specific gating (e.g., Amazon IAP vs Google Play Billing).
+
+**2. Manifest split (compile-time gating)**
+
+Flavor-specific `AndroidManifest.xml` files are merged with `main/AndroidManifest.xml` at build time:
+- `app/src/github/AndroidManifest.xml` — Adds `REQUEST_INSTALL_PACKAGES` permission and `FileProvider` (needed for APK installation)
+- `app/src/amazon/AndroidManifest.xml` — Empty (no install permission, no FileProvider)
+- `app/src/googleplay/AndroidManifest.xml` — Empty (no install permission, no FileProvider)
+
+The Android manifest merger automatically combines the appropriate flavor manifest with the main manifest.
+
+### Files Involved in Gating
+
+| File | What's Gated |
+|------|-------------|
+| `app/build.gradle.kts` | Flavor definitions, `IS_AMAZON_BUILD` + `IS_GOOGLE_PLAY_BUILD` fields |
+| `app/src/main/AndroidManifest.xml` | Shared permissions (no install permission here) |
+| `app/src/github/AndroidManifest.xml` | `REQUEST_INSTALL_PACKAGES` + FileProvider |
+| `app/src/amazon/AndroidManifest.xml` | Empty (no OTA-related entries) |
+| `app/src/googleplay/AndroidManifest.xml` | Empty (no OTA-related entries) |
+| `AppModule.kt` | `UpdateCheckerService` Koin registration |
+| `JellyfinApplication.kt` | `UpdateCheckWorker` scheduling |
+| `StartupActivity.kt` | OTA update check + What's New dialog |
+| `SettingsMainScreen.kt` | 4 UI items (updates + donate) + update overlay |
+
+### Adding a New Gated Feature
+
+To gate a new feature for specific flavors:
+
+1. **Runtime gate (sideloaded only):** Wrap with `if (!BuildConfig.IS_AMAZON_BUILD && !BuildConfig.IS_GOOGLE_PLAY_BUILD) { ... }`
+2. **Runtime gate (store-specific):** Use `BuildConfig.IS_AMAZON_BUILD` or `BuildConfig.IS_GOOGLE_PLAY_BUILD` individually
+3. **Permission gate:** Add the permission to the flavor-specific manifest instead of `main/`
+4. **DI gate:** Wrap the Koin `single { }` registration with the BuildConfig check
+5. **IMPORTANT:** If a service is only registered for certain flavors, make sure NO code path on excluded flavors can access it (lazy delegates like `by inject()` crash when resolved if the bean isn't registered)
+
+## OTA Update System (GitHub Flavor Only)
+
+The OTA update system is **only active in the `github` flavor**. On the `amazon` flavor, all update code paths are skipped — updates are handled by the Amazon Appstore.
+
+### How It Works
+
+1. **Update checking:** `UpdateCheckerService` queries the GitHub Releases API (`ToastyToast25/VoidStream-FireTV`)
+2. **Startup check:** On app launch, `StartupActivity` checks for forced updates (blocks app if `[FORCE]` tag is in release notes)
+3. **Background check:** `UpdateCheckWorker` runs daily via WorkManager to check for new releases
+4. **Optional vs Forced:**
+   - `[FORCE]` in release body → App blocks on forced update screen until installed
+   - No `[FORCE]` → Update is logged but app continues normally
+5. **Beta updates:** Pre-release GitHub Releases are only shown to users with "Beta updates" enabled in Settings
+6. **Download & verify:** APK is downloaded to cache, SHA-256 checksum verified against GitHub's digest, then user is prompted to install via `ACTION_INSTALL_PACKAGE` intent
+7. **What's New:** Release notes are saved to SharedPreferences before install. On next launch, a full-screen "What's New" fragment is shown, then cleared
+
+### Publishing an OTA Update (GitHub Flavor)
+
+#### 1. Bump Version
 
 Edit `gradle.properties`:
 
@@ -113,14 +213,14 @@ Edit `gradle.properties`:
 voidstream.version=X.Y.Z
 ```
 
-### 2. Build Release APK
+#### 2. Build Release APK
 
 ```bash
-./gradlew assembleRelease
-# Output: app/build/outputs/apk/release/voidstream-androidtv-vX.Y.Z-release.apk
+./gradlew assembleGithubRelease
+# Output: app/build/outputs/apk/github/release/voidstream-androidtv-vX.Y.Z-github-release.apk
 ```
 
-### 3. Commit and Push
+#### 3. Commit and Push
 
 ```bash
 git add -A
@@ -128,7 +228,7 @@ git commit -m "Description of changes — vX.Y.Z"
 git push origin master
 ```
 
-### 4. Create GitHub Release
+#### 4. Create GitHub Release
 
 Use `gh api` (not `gh release create` — it has auth scope issues):
 
@@ -147,23 +247,14 @@ gh api repos/ToastyToast25/VoidStream-FireTV/releases -X POST \
   --jq '.id,.upload_url,.html_url'
 
 # Upload the APK (replace RELEASE_ID with the id from above)
-gh api "https://uploads.github.com/repos/ToastyToast25/VoidStream-FireTV/releases/RELEASE_ID/assets?name=voidstream-androidtv-vX.Y.Z-release.apk" \
+gh api "https://uploads.github.com/repos/ToastyToast25/VoidStream-FireTV/releases/RELEASE_ID/assets?name=voidstream-androidtv-vX.Y.Z-github-release.apk" \
   -X POST \
-  --input "app/build/outputs/apk/release/voidstream-androidtv-vX.Y.Z-release.apk" \
+  --input "app/build/outputs/apk/github/release/voidstream-androidtv-vX.Y.Z-github-release.apk" \
   -H "Content-Type: application/vnd.android.package-archive" \
   --jq '.name,.size,.browser_download_url'
 ```
 
-### Forced vs Optional Updates
-
-The OTA updater checks the release body for `[FORCE]`:
-
-- **`[FORCE]` present:** App blocks on the update screen — user must install to continue
-- **`[FORCE]` absent:** Update is optional — app logs the available update and continues normally
-
-### Pre-release / Beta Builds
-
-Set `prerelease=true` when creating the release:
+#### Pre-release / Beta Builds
 
 ```bash
 -F prerelease=true
@@ -171,13 +262,82 @@ Set `prerelease=true` when creating the release:
 
 Only users with "Beta updates" enabled in Settings will see pre-release builds.
 
-### SHA-256 Verification
+## Amazon Appstore Restrictions
 
-GitHub automatically provides a `digest` field (`sha256:xxx`) on release assets. The app verifies the downloaded APK checksum against this digest before installing. No manual steps needed.
+The following features are **prohibited** by Amazon Appstore policies and are removed/gated in the `amazon` flavor:
 
-### What's New Dialog
+### 1. Self-Updating / OTA Updates
+- **Policy:** Apps may not "deliver additional executable code" outside the Amazon Appstore update mechanism
+- **Our solution:** All OTA update code is gated behind `BuildConfig.IS_AMAZON_BUILD`
+- **What's removed:** Update checker, forced update screen, What's New dialog, background update worker, `REQUEST_INSTALL_PACKAGES` permission, FileProvider
 
-After a successful update, the app saves the release notes to SharedPreferences before installing. On next launch, a "What's New" dialog is shown automatically with the version and notes, then cleared.
+### 2. External Monetization
+- **Policy:** All digital purchases must go through Amazon IAP (In-App Purchasing)
+- **Our solution:** The "Support VoidStream" donate button (QR code to external payment) is hidden on Amazon builds
+- **Future:** Implement Amazon IAP for subscriptions when ready
+
+### 3. Permissions
+- **`REQUEST_INSTALL_PACKAGES`:** Removed from Amazon manifest (only needed for OTA APK installation)
+- **`RECORD_AUDIO`:** Kept but declared optional (`android.hardware.microphone` with `required="false"`). Handled gracefully if denied — voice search button is disabled, text search always available as fallback
+
+### 4. GPL v2 Compliance (Deferred)
+- VoidStream is a fork of Jellyfin (GPL v2). Closed-source distribution may conflict with GPL v2
+- **Status:** Deferred — needs legal review before Amazon submission
+
+## Amazon Appstore Compliance Checklist
+
+**IMPORTANT:** Run through this checklist before every Amazon Appstore submission.
+
+### Pre-Submission Checks
+
+- [ ] Build the Amazon flavor: `./gradlew assembleAmazonRelease`
+- [ ] Install on emulator and verify:
+  - [ ] App launches without crash
+  - [ ] No "Check for Updates" in Settings
+  - [ ] No "Beta Updates" toggle in Settings
+  - [ ] No "Update Notifications" toggle in Settings
+  - [ ] No "Support VoidStream" donate button in Settings
+  - [ ] No forced update screen on startup
+  - [ ] No `REQUEST_INSTALL_PACKAGES` in `aapt dump permissions` output
+  - [ ] No FileProvider in merged manifest
+- [ ] Test D-pad navigation through all screens
+- [ ] Test RECORD_AUDIO denial (voice search degrades to text-only)
+- [ ] Verify app icon is 512x512 PNG with transparency (see `LOGOS/`)
+- [ ] Update `AMAZON_PRIVACY_DISCLOSURE.md` if data collection has changed
+- [ ] Prepare 3-10 Fire TV screenshots (1920x1080) in `SCREENSHOTS/`
+- [ ] Verify content rating is accurate
+
+### Verifying the Amazon APK
+
+```bash
+# Check permissions (REQUEST_INSTALL_PACKAGES should NOT appear)
+aapt dump permissions app/build/outputs/apk/amazon/release/voidstream-androidtv-v*.apk
+
+# Check for FileProvider (should NOT appear)
+aapt dump xmltree app/build/outputs/apk/amazon/release/voidstream-androidtv-v*.apk AndroidManifest.xml | grep FileProvider
+
+# Install and test
+adb install -r app/build/outputs/apk/amazon/release/voidstream-androidtv-v*.apk
+```
+
+### When Adding New Features
+
+If adding a feature that involves any of the following, it must be gated for store builds:
+
+- **Downloading or installing APKs** — Gate behind both `IS_AMAZON_BUILD` and `IS_GOOGLE_PLAY_BUILD`
+- **External payment links** — Gate behind both `IS_AMAZON_BUILD` and `IS_GOOGLE_PLAY_BUILD`
+- **Self-update mechanisms** — Gate behind both `IS_AMAZON_BUILD` and `IS_GOOGLE_PLAY_BUILD`
+- **Amazon-specific features (Amazon IAP)** — Gate behind `IS_AMAZON_BUILD` only
+- **Google Play-specific features (Play Billing)** — Gate behind `IS_GOOGLE_PLAY_BUILD` only
+- **New dangerous permissions** — Add to flavor-specific manifest, not `main/`
+- **Third-party analytics/tracking** — Ensure disclosed in `AMAZON_PRIVACY_DISCLOSURE.md`
+
+## Privacy Disclosure
+
+- **File:** `AMAZON_PRIVACY_DISCLOSURE.md` (root of repo)
+- **Purpose:** Documents all data collection, transmission, and storage for Amazon Appstore submission
+- **IMPORTANT:** Update this file whenever data collection or third-party integrations change
+- **What to update:** Add any new permissions, network calls, third-party services, or local storage
 
 ## Licensing
 

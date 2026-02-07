@@ -64,7 +64,7 @@ android {
 			if (signingConfigs.names.contains("release")) {
 				signingConfig = signingConfigs.getByName("release")
 			}
-			
+
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 
 			// Set package names used in various XML files
@@ -91,6 +91,28 @@ android {
 			resValue("string", "app_name", "VoidStream Debug")
 
 			buildConfigField("boolean", "DEVELOPMENT", (defaultConfig.versionCode!! < 100).toString())
+		}
+	}
+
+	flavorDimensions += "distribution"
+
+	productFlavors {
+		create("github") {
+			dimension = "distribution"
+			buildConfigField("boolean", "IS_AMAZON_BUILD", "false")
+			buildConfigField("boolean", "IS_GOOGLE_PLAY_BUILD", "false")
+		}
+
+		create("amazon") {
+			dimension = "distribution"
+			buildConfigField("boolean", "IS_AMAZON_BUILD", "true")
+			buildConfigField("boolean", "IS_GOOGLE_PLAY_BUILD", "false")
+		}
+
+		create("googleplay") {
+			dimension = "distribution"
+			buildConfigField("boolean", "IS_AMAZON_BUILD", "false")
+			buildConfigField("boolean", "IS_GOOGLE_PLAY_BUILD", "true")
 		}
 	}
 

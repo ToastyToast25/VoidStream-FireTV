@@ -90,7 +90,10 @@ import timber.log.Timber
 fun SettingsMainScreen() {
 	val router = LocalRouter.current
 	val context = LocalContext.current
-	val updateChecker by inject<UpdateCheckerService>(UpdateCheckerService::class.java)
+	val updateChecker = if (!BuildConfig.IS_AMAZON_BUILD && !BuildConfig.IS_GOOGLE_PLAY_BUILD) {
+		val service by inject<UpdateCheckerService>(UpdateCheckerService::class.java)
+		service
+	} else null
 	val userPreferences = koinInject<UserPreferences>()
 
 	var showUpdateOverlay by remember { mutableStateOf(false) }
@@ -184,81 +187,84 @@ fun SettingsMainScreen() {
 			)
 		}
 
-		item {
-			ListButton(
-				leadingContent = {
-					Icon(
-						painterResource(R.drawable.ic_get_app),
-						contentDescription = null
-					)
-				},
-				headingContent = { Text(stringResource(R.string.pref_check_for_updates)) },
-				captionContent = { Text(stringResource(R.string.settings_check_updates_caption)) },
-				onClick = {
-					CoroutineScope(Dispatchers.Main).launch {
-						Toast.makeText(context, context.getString(R.string.msg_checking_for_updates), Toast.LENGTH_SHORT).show()
-						try {
-							val result = updateChecker.checkForUpdate()
-							result.fold(
-								onSuccess = { info ->
-									if (info == null) {
+		// OTA update settings — only for sideloaded builds
+		if (!BuildConfig.IS_AMAZON_BUILD && !BuildConfig.IS_GOOGLE_PLAY_BUILD) {
+			item {
+				ListButton(
+					leadingContent = {
+						Icon(
+							painterResource(R.drawable.ic_get_app),
+							contentDescription = null
+						)
+					},
+					headingContent = { Text(stringResource(R.string.pref_check_for_updates)) },
+					captionContent = { Text(stringResource(R.string.settings_check_updates_caption)) },
+					onClick = {
+						CoroutineScope(Dispatchers.Main).launch {
+							Toast.makeText(context, context.getString(R.string.msg_checking_for_updates), Toast.LENGTH_SHORT).show()
+							try {
+								val result = updateChecker!!.checkForUpdate()
+								result.fold(
+									onSuccess = { info ->
+										if (info == null) {
+											Toast.makeText(context, context.getString(R.string.msg_update_check_failed), Toast.LENGTH_LONG).show()
+										} else if (!info.isNewer) {
+											Toast.makeText(context, context.getString(R.string.msg_no_updates_available), Toast.LENGTH_LONG).show()
+										} else {
+											pendingUpdateInfo = info
+											showUpdateOverlay = true
+										}
+									},
+									onFailure = { err ->
+										Timber.e(err, "Failed to check for updates")
 										Toast.makeText(context, context.getString(R.string.msg_update_check_failed), Toast.LENGTH_LONG).show()
-									} else if (!info.isNewer) {
-										Toast.makeText(context, context.getString(R.string.msg_no_updates_available), Toast.LENGTH_LONG).show()
-									} else {
-										pendingUpdateInfo = info
-										showUpdateOverlay = true
 									}
-								},
-								onFailure = { err ->
-									Timber.e(err, "Failed to check for updates")
-									Toast.makeText(context, context.getString(R.string.msg_update_check_failed), Toast.LENGTH_LONG).show()
-								}
-							)
-						} catch (e: Exception) {
-							Timber.e(e, "Error checking for updates")
-							Toast.makeText(context, context.getString(R.string.msg_update_check_failed), Toast.LENGTH_LONG).show()
+								)
+							} catch (e: Exception) {
+								Timber.e(e, "Error checking for updates")
+								Toast.makeText(context, context.getString(R.string.msg_update_check_failed), Toast.LENGTH_LONG).show()
+							}
 						}
 					}
-				}
-			)
-		}
+				)
+			}
 
-		item {
-			var updateNotificationsEnabled by rememberPreference(userPreferences, UserPreferences.updateNotificationsEnabled)
-			ListButton(
-				headingContent = { Text(stringResource(R.string.settings_update_notifications)) },
-				captionContent = { Text(stringResource(R.string.settings_update_notifications_description)) },
-				trailingContent = { Checkbox(checked = updateNotificationsEnabled) },
-				onClick = { updateNotificationsEnabled = !updateNotificationsEnabled }
-			)
-		}
+			item {
+				var updateNotificationsEnabled by rememberPreference(userPreferences, UserPreferences.updateNotificationsEnabled)
+				ListButton(
+					headingContent = { Text(stringResource(R.string.settings_update_notifications)) },
+					captionContent = { Text(stringResource(R.string.settings_update_notifications_description)) },
+					trailingContent = { Checkbox(checked = updateNotificationsEnabled) },
+					onClick = { updateNotificationsEnabled = !updateNotificationsEnabled }
+				)
+			}
 
-		item {
-			var betaUpdatesEnabled by rememberPreference(userPreferences, UserPreferences.betaUpdatesEnabled)
-			ListButton(
-				headingContent = { Text(stringResource(R.string.pref_beta_channel)) },
-				captionContent = { Text(stringResource(R.string.pref_beta_channel_description)) },
-				trailingContent = { Checkbox(checked = betaUpdatesEnabled) },
-				onClick = { betaUpdatesEnabled = !betaUpdatesEnabled }
-			)
-		}
+			item {
+				var betaUpdatesEnabled by rememberPreference(userPreferences, UserPreferences.betaUpdatesEnabled)
+				ListButton(
+					headingContent = { Text(stringResource(R.string.pref_beta_channel)) },
+					captionContent = { Text(stringResource(R.string.pref_beta_channel_description)) },
+					trailingContent = { Checkbox(checked = betaUpdatesEnabled) },
+					onClick = { betaUpdatesEnabled = !betaUpdatesEnabled }
+				)
+			}
 
-		item {
-			ListButton(
-				leadingContent = {
-					Icon(
-						painterResource(R.drawable.ic_heart),
-						contentDescription = null,
-						tint = Color.Red
-					)
-				},
-				headingContent = { Text(stringResource(R.string.settings_support_voidstream)) },
-				captionContent = { Text(stringResource(R.string.settings_support_voidstream_description)) },
-				onClick = {
-					showDonateDialog(context)
-				}
-			)
+			item {
+				ListButton(
+					leadingContent = {
+						Icon(
+							painterResource(R.drawable.ic_heart),
+							contentDescription = null,
+							tint = Color.Red
+						)
+					},
+					headingContent = { Text(stringResource(R.string.settings_support_voidstream)) },
+					captionContent = { Text(stringResource(R.string.settings_support_voidstream_description)) },
+					onClick = {
+						showDonateDialog(context)
+					}
+				)
+			}
 		}
 
 		item {
@@ -279,10 +285,10 @@ fun SettingsMainScreen() {
 		}
 	}
 
-	if (showUpdateOverlay && pendingUpdateInfo != null) {
+	if (!BuildConfig.IS_AMAZON_BUILD && !BuildConfig.IS_GOOGLE_PLAY_BUILD && showUpdateOverlay && pendingUpdateInfo != null) {
 		SettingsUpdateOverlay(
 			info = pendingUpdateInfo!!,
-			updateChecker = updateChecker,
+			updateChecker = updateChecker!!,
 			onDismiss = { showUpdateOverlay = false },
 		)
 	}
