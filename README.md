@@ -11,7 +11,39 @@
 
 > **[← Back to main VoidStream project](https://github.com/ToastyToast25)**
 
-VoidStream for Android TV is an enhanced fork of the official Jellyfin Android TV client, optimized for the viewing experience on Android TV, Nvidia Shield, and Amazon Fire TV devices.
+VoidStream for Android TV is an enhanced fork of the official Jellyfin Android TV client, optimized for the viewing experience on Android TV, Nvidia Shield, Amazon Fire TV, and Google TV devices.
+
+## Supported Devices & Platforms
+
+| Platform | Minimum OS | Supported Devices |
+|----------|-----------|-------------------|
+| **Amazon Fire TV** | Fire OS 5+ (Android 5.1+) | Fire TV Stick (2nd Gen+), Fire TV Stick 4K, Fire TV Stick 4K Max, Fire TV Cube, Fire TV (3rd Gen+) |
+| **Android TV** | Android 6.0 (Marshmallow) | Sony Bravia, Philips, Hisense, TCL, and other Android TV-certified devices |
+| **Nvidia Shield** | Android 6.0+ | Shield TV (2015), Shield TV (2017), Shield TV (2019), Shield TV Pro |
+| **Google TV** | Android 10+ | Chromecast with Google TV, TCL Google TV, Sony Google TV, and other Google TV devices |
+
+**Minimum Android SDK:** API 23 (Android 6.0)
+
+## Available Builds
+
+VoidStream is distributed through multiple channels. Each build is tailored for its distribution platform.
+
+| Build | Distribution | OTA Updates | Install Method |
+|-------|-------------|-------------|----------------|
+| **GitHub** | [GitHub Releases](https://github.com/ToastyToast25/VoidStream-FireTV/releases) | Built-in auto-updates | Sideload via Downloader app or ADB |
+| **Amazon** | Amazon Appstore | Managed by Amazon | Install directly from Fire TV Appstore |
+| **Google Play** | Google Play Store | Managed by Google Play | Install directly from Google Play Store |
+
+### Build Differences
+
+| Feature | GitHub | Amazon | Google Play |
+|---------|--------|--------|-------------|
+| OTA self-updates | Yes | No | No |
+| Update notifications | Yes | No | No |
+| Donate button | Yes | No | No |
+| Install permission | Yes | No | No |
+| Update channel | GitHub Releases API | Amazon Appstore | Google Play Store |
+| Payment system | N/A | Amazon IAP | Google Play Billing |
 
 ## Features & Enhancements
 
@@ -128,67 +160,84 @@ https://github.com/user-attachments/assets/0414ffca-60f4-470a-94b9-6b3405b3570c
 
 ---
 
-## Installation on Amazon Fire TV / Fire Stick
+## Installation
 
-Follow these steps to install VoidStream on your Fire TV Stick or Fire TV device:
+### Amazon Fire TV / Fire Stick
 
-### Step 1: Enable Developer Options
+**From the Amazon Appstore (Recommended):**
+Search for **"VoidStream"** in the Amazon Appstore on your Fire TV device and install directly. Updates are handled automatically by the Amazon Appstore.
+
+**Sideload from GitHub (Advanced):**
+
+<details>
+<summary>Click to expand sideloading instructions</summary>
+
+#### Step 1: Enable Developer Options
 1. Go to **Settings** on your Fire TV
 2. Select **My Fire TV** (or **Device & Software**)
 3. Select **About**
 4. Click on **your Fire TV name** 7 times rapidly until you see "You are now a developer"
 
-### Step 2: Enable Apps from Unknown Sources
+#### Step 2: Enable Apps from Unknown Sources
 1. Go back to **Settings → My Fire TV**
 2. Select **Developer Options**
 3. Turn on **Apps from Unknown Sources** (or **Install unknown apps**)
 4. If prompted, confirm with **Turn On**
 
-### Step 3: Install the Downloader App
+#### Step 3: Install the Downloader App
 1. From the Fire TV home screen, go to **Find → Search**
 2. Search for **"Downloader"** (by AFTVnews, orange icon)
 3. Install and open the Downloader app
 4. When prompted, allow Downloader to access files
 
-### Step 4: Download and Install VoidStream
+#### Step 4: Download and Install VoidStream
 1. Open the **Downloader** app
 2. In the URL field, enter the download URL for the latest release:
    ```
    https://github.com/ToastyToast25/VoidStream-FireTV/releases/latest
    ```
-3. Navigate to the **Assets** section and select the `.apk` file
+3. Navigate to the **Assets** section and select the **github** `.apk` file
 4. The APK will download — when finished, select **Install**
 5. Once installed, select **Done** (or **Open** to launch immediately)
 6. Go back to Downloader and select **Delete** to remove the APK file and free up space
 
-### Step 5: Launch VoidStream
+#### Step 5: Launch VoidStream
 1. Go to **Settings → Applications → Manage Installed Applications** to find VoidStream
 2. Or look for **VoidStream** in your Apps & Channels row on the home screen
 3. To move it to the front: long-press the app icon → select **Move to front**
 
-### Alternative: Sideload via ADB
-If you prefer using a computer:
+</details>
 
-1. Enable **ADB Debugging** in Developer Options on your Fire TV
-2. Find your Fire TV's IP address: **Settings → My Fire TV → About → Network**
+### Android TV / Google TV
+
+**From Google Play (Recommended):**
+Search for **"VoidStream"** on the Google Play Store from your Android TV or Google TV device and install directly. Updates are handled automatically by Google Play.
+
+**Sideload from GitHub:**
+Download the **github** APK from the [Releases page](https://github.com/ToastyToast25/VoidStream-FireTV/releases) and install via USB drive, Downloader app, or ADB.
+
+### Nvidia Shield TV
+
+Install from **Google Play** on your Shield, or sideload the **github** APK from the [Releases page](https://github.com/ToastyToast25/VoidStream-FireTV/releases).
+
+### Sideload via ADB (Any Device)
+
+1. Enable **ADB Debugging** in Developer Options on your device
+2. Find your device's IP address in Settings → Network
 3. On your computer, connect via ADB:
    ```bash
-   adb connect <FIRE_TV_IP>:5555
+   adb connect <DEVICE_IP>:5555
    ```
-4. Download the APK from the [Releases page](https://github.com/ToastyToast25/VoidStream-FireTV/releases)
+4. Download the **github** APK from the [Releases page](https://github.com/ToastyToast25/VoidStream-FireTV/releases)
 5. Install via ADB:
    ```bash
-   adb install voidstream-androidtv-v*.apk
+   adb install voidstream-androidtv-v*-github-release.apk
    ```
 
 ### Updating VoidStream
-VoidStream includes a built-in **OTA Update System** that automatically checks for new versions. When an update is available, you'll receive an in-app notification with the option to download and install directly — no need to repeat the sideloading steps.
 
-## Other Supported Devices
-
-- **Android TV** (Android 6.0+) — Install the APK directly or via ADB
-- **Nvidia Shield TV** — Same steps as above, or use the Downloader app
-- **Google TV (Chromecast)** — Enable Developer Options, then sideload via Downloader or ADB
+- **Amazon Appstore & Google Play:** Updates are delivered automatically through the respective store.
+- **GitHub (sideloaded):** VoidStream includes a built-in **OTA Update System** that automatically checks for new versions. When an update is available, you'll receive an in-app notification with the option to download and install directly — no need to repeat the sideloading steps.
 
 ## Jellyseerr Setup (Optional)
 To enable media discovery and requesting:
@@ -204,44 +253,45 @@ Your session is saved securely and will reconnect automatically.
 ## Building from Source
 
 ### Prerequisites
+
 - Android Studio Arctic Fox or newer
 - JDK 11 or newer
 - Android SDK with API 23+ installed
 
-### Steps
+### Build Commands
 
-1. **Clone the repository:**
 ```bash
+# Clone the repository
 git clone https://github.com/ToastyToast25/VoidStream-FireTV.git
 cd VoidStream-FireTV
+
+# Build debug (github flavor)
+./gradlew assembleGithubDebug
+
+# Build release APKs (requires signing config)
+./gradlew assembleGithubRelease    # Sideload build with OTA updates
+./gradlew assembleAmazonRelease    # Amazon Appstore build
+./gradlew assembleGoogleplayRelease # Google Play Store build
 ```
 
-2. **Build debug version:**
-```bash
-./gradlew assembleDebug
+### APK Output Locations
+
+```text
+app/build/outputs/apk/github/release/voidstream-androidtv-v{VERSION}-github-release.apk
+app/build/outputs/apk/amazon/release/voidstream-androidtv-v{VERSION}-amazon-release.apk
+app/build/outputs/apk/googleplay/release/voidstream-androidtv-v{VERSION}-googleplay-release.apk
 ```
 
-3. **Install to connected device:**
-```bash
-./gradlew installDebug
-```
+### Release Signing
 
-4. **Build release version:**
+Create a `keystore.properties` file in the root directory (use `keystore.properties.template` as a guide):
 
-First, create a `keystore.properties` file in the root directory (use `keystore.properties.template` as a guide):
 ```properties
 storeFile=/path/to/your/keystore.jks
 storePassword=your_store_password
 keyAlias=your_key_alias
 keyPassword=your_key_password
 ```
-
-Then build:
-```bash
-./gradlew assembleRelease
-```
-
-The APK will be in `app/build/outputs/apk/release/`
 
 ## Development
 
