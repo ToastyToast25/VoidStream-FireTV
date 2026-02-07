@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -48,7 +50,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -584,12 +593,20 @@ private fun ReleaseNotesOverlay(
 	onDismiss: () -> Unit,
 ) {
 	val scrollState = rememberScrollState()
+	val scope = rememberCoroutineScope()
+	val closeFocusRequester = remember { FocusRequester() }
 
-	// Full-screen dark overlay
+	// Give Close button focus immediately so user can always press OK to close
+	LaunchedEffect(Unit) {
+		closeFocusRequester.requestFocus()
+	}
+
+	// Full-screen overlay — clickable to block input to the screen behind
 	Box(
 		modifier = Modifier
 			.fillMaxSize()
-			.background(Color(0xDD000000)),
+			.background(Color(0xDD000000))
+			.focusable(),
 		contentAlignment = Alignment.Center,
 	) {
 		// Card
@@ -635,7 +652,7 @@ private fun ReleaseNotesOverlay(
 
 			HorizontalDivider(color = Color(0xFF3A1A1A), thickness = 1.dp)
 
-			// Scrollable content
+			// Scrollable content (not focusable — scrolled by the Close button's key handler)
 			Box(
 				modifier = Modifier
 					.weight(1f)
@@ -751,6 +768,22 @@ private fun ReleaseNotesOverlay(
 					modifier = Modifier
 						.width(120.dp)
 						.height(40.dp)
+						.focusRequester(closeFocusRequester)
+						.onPreviewKeyEvent { event ->
+							if (event.type == KeyEventType.KeyDown) {
+								when (event.key) {
+									Key.DirectionDown -> {
+										scope.launch { scrollState.animateScrollBy(200f) }
+										true
+									}
+									Key.DirectionUp -> {
+										scope.launch { scrollState.animateScrollBy(-200f) }
+										true
+									}
+									else -> false
+								}
+							} else false
+						}
 						.then(
 							if (closeButtonFocused) Modifier.border(2.dp, Color.White, RoundedCornerShape(8.dp))
 							else Modifier

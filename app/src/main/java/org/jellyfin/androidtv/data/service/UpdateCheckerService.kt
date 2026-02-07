@@ -341,10 +341,11 @@ class UpdateCheckerService(private val context: Context) {
 	 * Save pending "What's New" info to show after the update installs.
 	 */
 	fun savePendingWhatsNew(version: String, notes: String) {
+		Timber.i("Saving pending What's New for version $version")
 		prefs.edit()
 			.putString(KEY_PENDING_WHATS_NEW_VERSION, version)
 			.putString(KEY_PENDING_WHATS_NEW_NOTES, notes)
-			.apply()
+			.commit() // Use commit() (synchronous) to ensure data is written before install starts
 	}
 
 	/**
