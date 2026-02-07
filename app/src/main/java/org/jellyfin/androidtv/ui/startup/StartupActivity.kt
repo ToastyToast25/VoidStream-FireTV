@@ -23,7 +23,9 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 import org.jellyfin.androidtv.JellyfinApplication
 import org.jellyfin.androidtv.R
 import org.jellyfin.androidtv.auth.repository.SessionRepository
@@ -39,6 +41,7 @@ import org.jellyfin.androidtv.ui.navigation.NavigationRepository
 import org.jellyfin.androidtv.ui.playback.MediaManager
 import org.jellyfin.androidtv.data.service.UpdateCheckerService
 import org.jellyfin.androidtv.ui.startup.fragment.ForceUpdateFragment
+import org.jellyfin.androidtv.ui.startup.fragment.WhatsNewFragment
 import org.jellyfin.androidtv.ui.startup.fragment.SelectServerFragment
 import org.jellyfin.androidtv.ui.startup.fragment.ServerFragment
 import org.jellyfin.androidtv.ui.startup.fragment.SplashFragment
@@ -121,16 +124,19 @@ class StartupActivity : FragmentActivity() {
 		}
 	}
 
-	private fun showWhatsNewIfPending() {
+	private suspend fun showWhatsNewIfPending() {
 		val whatsNew = updateCheckerService.getPendingWhatsNew() ?: return
 		val (version, notes) = whatsNew
 		Timber.i("Showing What's New for version $version")
 
-		androidx.appcompat.app.AlertDialog.Builder(this)
-			.setTitle(getString(R.string.whats_new_updated_to, version))
-			.setMessage(notes)
-			.setPositiveButton(getString(R.string.whats_new_dismiss), null)
-			.show()
+		suspendCancellableCoroutine { continuation ->
+			supportFragmentManager.setFragmentResultListener("whats_new_done", this@StartupActivity) { _, _ ->
+				continuation.resume(Unit)
+			}
+			supportFragmentManager.commit {
+				replace(R.id.content_view, WhatsNewFragment.newInstance(version, notes))
+			}
+		}
 	}
 
 	private suspend fun checkForForcedUpdate(): Boolean {

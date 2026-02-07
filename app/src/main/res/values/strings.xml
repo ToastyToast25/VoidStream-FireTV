@@ -1025,6 +1025,7 @@
     <string name="whats_new_title">What\'s New</string>
     <string name="whats_new_updated_to">Updated to Version %s</string>
     <string name="whats_new_dismiss">Got it</string>
+    <string name="whats_new_continue">Continue</string>
     <string name="pref_beta_channel">Beta updates</string>
     <string name="pref_beta_channel_description">Receive pre-release builds (may be unstable)</string>
 
