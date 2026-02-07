@@ -262,6 +262,27 @@ gh api "https://uploads.github.com/repos/ToastyToast25/VoidStream-FireTV/release
 
 Only users with "Beta updates" enabled in Settings will see pre-release builds.
 
+## CI/CD Workflows
+
+GitHub Actions workflows are in `.github/workflows/`.
+
+### App Build (`app-build.yaml`)
+- **Triggers:** Push to `master` or `release-*`, and all pull requests
+- **What it does:** Checks out code, sets up Java + Gradle, runs `./gradlew assembleDebug`, uploads APK artifacts
+- **Retention:** 14 days for build artifacts
+
+### Update README Badges (`update-badges.yaml`)
+- **Triggers:** Push to `master` when `gradle/libs.versions.toml` or `gradle/wrapper/gradle-wrapper.properties` change
+- **What it does:** Parses version numbers from the TOML catalog and Gradle wrapper, then updates the shields.io badge URLs in `README.md`
+- **Versions tracked:** Android SDK (min–target), Kotlin, Java, Gradle, Jellyfin SDK, Media3, Jetpack Compose
+- **Commit message:** `Update README version badges [skip ci]` (uses `[skip ci]` to prevent infinite loop)
+- **How badge matching works:** Each badge URL contains a unique color code suffix (e.g., `Kotlin-{VERSION}-7F52FF`). The workflow uses `sed` to match and replace the version portion between the badge name and color code.
+
+### When Bumping Versions
+- The badge workflow runs **automatically** — no manual README edits needed when updating `libs.versions.toml` or the Gradle wrapper
+- The Release badge (`img.shields.io/github/release/...`) is dynamic and always shows the latest GitHub release tag
+- If you add a new badge, add a corresponding `sed` replacement in `update-badges.yaml`
+
 ## Amazon Appstore Restrictions
 
 The following features are **prohibited** by Amazon Appstore policies and are removed/gated in the `amazon` flavor:
@@ -331,6 +352,77 @@ If adding a feature that involves any of the following, it must be gated for sto
 - **Google Play-specific features (Play Billing)** — Gate behind `IS_GOOGLE_PLAY_BUILD` only
 - **New dangerous permissions** — Add to flavor-specific manifest, not `main/`
 - **Third-party analytics/tracking** — Ensure disclosed in `AMAZON_PRIVACY_DISCLOSURE.md`
+
+## Google Play Store Restrictions
+
+The following features are **prohibited** by Google Play policies and are removed/gated in the `googleplay` flavor:
+
+### 1. Self-Updating / OTA Updates
+
+- **Policy:** Apps may not modify, replace, or update themselves outside of Google Play's update mechanism
+- **Our solution:** All OTA update code is gated behind `BuildConfig.IS_GOOGLE_PLAY_BUILD`
+- **What's removed:** Update checker, forced update screen, What's New dialog, background update worker, `REQUEST_INSTALL_PACKAGES` permission, FileProvider
+
+### 2. External Monetization
+
+- **Policy:** All digital purchases must go through Google Play Billing
+- **Our solution:** The "Support VoidStream" donate button (QR code to external payment) is hidden on Google Play builds
+- **Future:** Implement Google Play Billing for subscriptions when ready
+
+### 3. Permissions
+
+- **`REQUEST_INSTALL_PACKAGES`:** Removed from Google Play manifest (only needed for OTA APK installation)
+- **`RECORD_AUDIO`:** Kept but declared optional (`android.hardware.microphone` with `required="false"`). Handled gracefully if denied — voice search button is disabled, text search always available as fallback
+
+### 4. GPL v2 Compliance (Deferred)
+
+- VoidStream is a fork of Jellyfin (GPL v2). Closed-source distribution may conflict with GPL v2
+- **Status:** Deferred — needs legal review before Google Play submission
+
+## Google Play Compliance Checklist
+
+**IMPORTANT:** Run through this checklist before every Google Play Store submission.
+
+### Pre-Submission Checks
+
+- [ ] Build the Google Play flavor: `./gradlew assembleGoogleplayRelease`
+- [ ] Install on emulator and verify:
+  - [ ] App launches without crash
+  - [ ] No "Check for Updates" in Settings
+  - [ ] No "Beta Updates" toggle in Settings
+  - [ ] No "Update Notifications" toggle in Settings
+  - [ ] No "Support VoidStream" donate button in Settings
+  - [ ] No forced update screen on startup
+  - [ ] No `REQUEST_INSTALL_PACKAGES` in `aapt dump permissions` output
+  - [ ] No FileProvider in merged manifest
+- [ ] Test D-pad navigation through all screens
+- [ ] Test RECORD_AUDIO denial (voice search degrades to text-only)
+- [ ] Verify app icon meets Google Play requirements
+- [ ] Prepare feature graphic (1024x500) and screenshots
+- [ ] Verify content rating is accurate
+- [ ] Data Safety form is up to date
+
+### Verifying the Google Play APK
+
+```bash
+# Check permissions (REQUEST_INSTALL_PACKAGES should NOT appear)
+aapt dump permissions app/build/outputs/apk/googleplay/release/voidstream-androidtv-v*.apk
+
+# Check for FileProvider (should NOT appear)
+aapt dump xmltree app/build/outputs/apk/googleplay/release/voidstream-androidtv-v*.apk AndroidManifest.xml | grep FileProvider
+
+# Install and test
+adb install -r app/build/outputs/apk/googleplay/release/voidstream-androidtv-v*.apk
+```
+
+### Building AAB for Store Submission
+
+Google Play requires Android App Bundle (AAB) format:
+
+```bash
+./gradlew bundleGoogleplayRelease
+# Output: app/build/outputs/bundle/googleplayRelease/voidstream-androidtv-v{VERSION}-googleplay-release.aab
+```
 
 ## Privacy Disclosure
 
