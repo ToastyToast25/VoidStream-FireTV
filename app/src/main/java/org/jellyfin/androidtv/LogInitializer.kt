@@ -2,6 +2,7 @@ package org.jellyfin.androidtv
 
 import android.content.Context
 import androidx.startup.Initializer
+import org.jellyfin.androidtv.data.service.AppLogCollector
 import timber.log.Timber
 
 class LogInitializer : Initializer<Unit> {
@@ -21,7 +22,13 @@ class LogInitializer : Initializer<Unit> {
 
 		// Initialize the logging library
 		Timber.plant(Timber.DebugTree())
-		Timber.i("Debug tree planted")
+
+		// Plant log collector tree for in-memory ring buffer capture
+		val logCollector = AppLogCollector.instance
+		Timber.plant(logCollector.tree)
+		logCollector.init(context.applicationContext)
+
+		Timber.i("Debug tree and log collector planted")
 	}
 
 	override fun dependencies() = emptyList<Class<out Initializer<*>>>()

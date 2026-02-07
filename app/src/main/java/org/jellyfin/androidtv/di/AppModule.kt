@@ -33,6 +33,7 @@ import org.jellyfin.androidtv.data.repository.NotificationsRepository
 import org.jellyfin.androidtv.data.repository.NotificationsRepositoryImpl
 import org.jellyfin.androidtv.data.repository.UserViewsRepository
 import org.jellyfin.androidtv.data.repository.UserViewsRepositoryImpl
+import org.jellyfin.androidtv.data.service.AppLogCollector
 import org.jellyfin.androidtv.data.service.BackgroundService
 import org.jellyfin.androidtv.data.service.IssueReporterService
 import org.jellyfin.androidtv.data.service.UpdateCheckerService
@@ -209,7 +210,8 @@ val appModule = module {
 
 	single { BackgroundService(get(), get(), get(), get(), get(), get(), get()) }
 	single { UpdateCheckerService(get()) }
-	single { IssueReporterService(androidContext()) }
+	single { AppLogCollector.instance }
+	single { IssueReporterService(androidContext(), get()) }
 
 	single { MarkdownRenderer(get()) }
 	single { ItemLauncher() }

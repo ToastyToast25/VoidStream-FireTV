@@ -16,7 +16,10 @@ import org.jellyfin.androidtv.BuildConfig
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
-class IssueReporterService(private val context: Context) {
+class IssueReporterService(
+	private val context: Context,
+	private val logCollector: AppLogCollector,
+) {
 	companion object {
 		private const val GITHUB_OWNER = "ToastyToast25"
 		private const val GITHUB_REPO = "VoidStream-FireTV"
@@ -195,6 +198,9 @@ class IssueReporterService(private val context: Context) {
 				appendLine("- Device: ${Build.MANUFACTURER} ${Build.MODEL}")
 				appendLine("- Android: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
 				appendLine("- Build: ${Build.DISPLAY}")
+
+				// Append logs (ring buffer + crash + logcat) in collapsed sections
+				append(logCollector.buildLogSection())
 			}
 
 			val requestBody = json.encodeToString(CreateIssueRequest(
