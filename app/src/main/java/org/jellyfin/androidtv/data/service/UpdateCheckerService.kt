@@ -1,10 +1,13 @@
 package org.jellyfin.androidtv.data.service
 
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.Build
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -49,6 +52,7 @@ class UpdateCheckerService(private val context: Context) {
 		private const val PREFS_NAME = "update_checker"
 		private const val KEY_PENDING_WHATS_NEW_VERSION = "pending_whats_new_version"
 		private const val KEY_PENDING_WHATS_NEW_NOTES = "pending_whats_new_notes"
+		const val ACTION_INSTALL_STATUS = "org.voidstream.androidtv.INSTALL_STATUS"
 	}
 
 	private var cachedUpdateInfo: UpdateInfo? = null
@@ -335,15 +339,87 @@ class UpdateCheckerService(private val context: Context) {
 	}
 
 	/**
-	 * Install the downloaded APK
+	 * Install the downloaded APK using PackageInstaller session API.
+	 * Returns true if the install session was committed successfully, false on error.
 	 */
-	fun installUpdate(apkUri: Uri) {
-		val intent = Intent(Intent.ACTION_VIEW).apply {
-			setDataAndType(apkUri, "application/vnd.android.package-archive")
-			addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-			addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+	fun installUpdate(apkUri: Uri): Boolean {
+		return try {
+			val apkFile = getApkFile()
+			if (apkFile == null || !apkFile.exists()) {
+				Timber.e("APK file not found for installation")
+				return false
+			}
+			installViaPackageInstaller(apkFile)
+		} catch (e: Exception) {
+			Timber.e(e, "PackageInstaller failed, trying intent fallback")
+			installViaIntent(apkUri)
 		}
-		context.startActivity(intent)
+	}
+
+	private fun installViaPackageInstaller(apkFile: File): Boolean {
+		val installer = context.packageManager.packageInstaller
+		val params = PackageInstaller.SessionParams(
+			PackageInstaller.SessionParams.MODE_FULL_INSTALL
+		).apply {
+			setSize(apkFile.length())
+		}
+
+		val sessionId = installer.createSession(params)
+		val session = installer.openSession(sessionId)
+
+		try {
+			// Write APK into the session
+			session.openWrite("update.apk", 0, apkFile.length()).use { output ->
+				apkFile.inputStream().use { input ->
+					input.copyTo(output)
+				}
+				session.fsync(output)
+			}
+
+			// Create a status receiver intent
+			val intent = Intent(ACTION_INSTALL_STATUS).apply {
+				setPackage(context.packageName)
+			}
+			val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+				PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+			} else {
+				PendingIntent.FLAG_UPDATE_CURRENT
+			}
+			val pendingIntent = PendingIntent.getBroadcast(
+				context, sessionId, intent, flags
+			)
+
+			// Commit the session — system will show install confirmation
+			session.commit(pendingIntent.intentSender)
+			Timber.i("PackageInstaller session $sessionId committed")
+			return true
+		} catch (e: Exception) {
+			session.abandon()
+			throw e
+		}
+	}
+
+	@Suppress("DEPRECATION")
+	private fun installViaIntent(apkUri: Uri): Boolean {
+		return try {
+			val intent = Intent(Intent.ACTION_INSTALL_PACKAGE).apply {
+				data = apkUri
+				addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+				addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+				putExtra(Intent.EXTRA_NOT_UNKNOWN_SOURCE, true)
+			}
+			context.startActivity(intent)
+			true
+		} catch (e: Exception) {
+			Timber.e(e, "Intent-based install also failed")
+			false
+		}
+	}
+
+	private fun getApkFile(): File? {
+		val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+		val apkFile = File(baseDir, "downloads/update.apk")
+		return if (apkFile.exists()) apkFile else null
 	}
 
 	/**

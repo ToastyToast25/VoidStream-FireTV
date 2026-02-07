@@ -29,6 +29,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -36,6 +37,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -309,6 +313,19 @@ private fun SettingsUpdateOverlay(
 
 	val canDismiss = dlState == DlState.IDLE || dlState == DlState.FAILED || dlState == DlState.DONE
 
+	// Lifecycle recovery: if the app resumes while in INSTALLING state, the install
+	// didn't complete (user cancelled, installer failed, etc.) — reset to allow retry
+	val lifecycleOwner = LocalLifecycleOwner.current
+	DisposableEffect(lifecycleOwner) {
+		val observer = LifecycleEventObserver { _, event ->
+			if (event == Lifecycle.Event.ON_RESUME && dlState == DlState.INSTALLING) {
+				dlState = DlState.FAILED
+			}
+		}
+		lifecycleOwner.lifecycle.addObserver(observer)
+		onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+	}
+
 	LaunchedEffect(Unit) { dlBtnFocus.requestFocus() }
 
 	Dialog(
@@ -358,9 +375,9 @@ private fun SettingsUpdateOverlay(
 							}
 							result.fold(
 								onSuccess = { apkUri ->
-									dlState = DlState.INSTALLING
 									updateChecker.savePendingWhatsNew(info.version, info.releaseNotes)
-									updateChecker.installUpdate(apkUri)
+									val installed = updateChecker.installUpdate(apkUri)
+									dlState = if (installed) DlState.INSTALLING else DlState.FAILED
 								},
 								onFailure = { err ->
 									Timber.e(err, "Download failed")
