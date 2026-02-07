@@ -130,6 +130,11 @@ class UserPreferences(context: Context) : SharedPreferenceStore(
 		var updateNotificationsEnabled = booleanPreference("update_notifications_enabled", true)
 
 		/**
+		 * Enable beta update channel to receive pre-release builds
+		 */
+		var betaUpdatesEnabled = booleanPreference("beta_updates_enabled", false)
+
+		/**
 		 * Seasonal surprise effect selection (none, winter, spring, fall)
 		 */
 		var seasonalSurprise = stringPreference("seasonal_surprise", "none")

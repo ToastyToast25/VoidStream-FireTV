@@ -1017,6 +1017,16 @@
     <string name="force_update_version_display">Version %s</string>
     <string name="force_update_button_close">Close</string>
     <string name="force_update_button_report_issue">Report Issue</string>
+    <string name="force_update_verifying">Verifying download…</string>
+    <string name="force_update_checksum_failed">Verification failed. Tap to retry.</string>
+    <string name="force_update_no_network">No internet connection. Please check your network and try again.</string>
+    <string name="force_update_download_progress">%1$s / %2$s MB</string>
+    <string name="force_update_beta_badge">BETA</string>
+    <string name="whats_new_title">What\'s New</string>
+    <string name="whats_new_updated_to">Updated to Version %s</string>
+    <string name="whats_new_dismiss">Got it</string>
+    <string name="pref_beta_channel">Beta updates</string>
+    <string name="pref_beta_channel_description">Receive pre-release builds (may be unstable)</string>
 
     <!-- Report Issue -->
     <string name="report_issue_title">Report an Issue</string>

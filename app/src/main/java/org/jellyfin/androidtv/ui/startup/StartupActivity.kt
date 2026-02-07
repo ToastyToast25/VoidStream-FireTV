@@ -30,6 +30,7 @@ import org.jellyfin.androidtv.auth.repository.SessionRepository
 import org.jellyfin.androidtv.auth.repository.SessionRepositoryState
 import org.jellyfin.androidtv.auth.repository.UserRepository
 import org.jellyfin.androidtv.databinding.ActivityStartupBinding
+import org.jellyfin.androidtv.preference.UserPreferences
 import org.jellyfin.androidtv.ui.background.AppBackground
 import org.jellyfin.androidtv.ui.browsing.MainActivity
 import org.jellyfin.androidtv.ui.itemhandling.ItemLauncher
@@ -66,6 +67,7 @@ class StartupActivity : FragmentActivity() {
 	private val navigationRepository: NavigationRepository by inject()
 	private val itemLauncher: ItemLauncher by inject()
 	private val updateCheckerService: UpdateCheckerService by inject()
+	private val userPreferences: UserPreferences by inject()
 
 	private lateinit var binding: ActivityStartupBinding
 
@@ -106,23 +108,51 @@ class StartupActivity : FragmentActivity() {
 	}
 
 	private fun onPermissionsGranted() {
-		// Check for forced update immediately, before any login/server flow
 		lifecycleScope.launch {
+			// Show "What's New" if we just updated
+			showWhatsNewIfPending()
+
+			// Check for updates (forced or optional)
 			val updateBlocking = checkForForcedUpdate()
 			if (updateBlocking) return@launch
 
-			// No update needed, proceed with normal session flow
+			// No blocking update, proceed with normal session flow
 			startSessionFlow()
 		}
 	}
 
+	private fun showWhatsNewIfPending() {
+		val whatsNew = updateCheckerService.getPendingWhatsNew() ?: return
+		val (version, notes) = whatsNew
+		Timber.i("Showing What's New for version $version")
+
+		androidx.appcompat.app.AlertDialog.Builder(this)
+			.setTitle(getString(R.string.whats_new_updated_to, version))
+			.setMessage(notes)
+			.setPositiveButton(getString(R.string.whats_new_dismiss), null)
+			.show()
+	}
+
 	private suspend fun checkForForcedUpdate(): Boolean {
 		return try {
+			// Skip update check if no network
+			if (!updateCheckerService.isNetworkAvailable()) {
+				Timber.d("No network, skipping update check")
+				return false
+			}
+
+			val betaEnabled = userPreferences[UserPreferences.betaUpdatesEnabled]
 			val updateResult = withContext(Dispatchers.IO) {
-				updateCheckerService.checkForUpdate()
+				updateCheckerService.checkForUpdate(includePrereleases = betaEnabled)
 			}
 			val updateInfo = updateResult.getOrNull()
 			if (updateInfo != null && updateInfo.isNewer) {
+				// Optional update — don't block, just log
+				if (!updateInfo.isForced) {
+					Timber.i("Optional update available: ${updateInfo.version} (not blocking)")
+					return false
+				}
+
 				Timber.i("Forced update required: current -> ${updateInfo.version}")
 
 				// Try to get combined changelog if multiple versions behind

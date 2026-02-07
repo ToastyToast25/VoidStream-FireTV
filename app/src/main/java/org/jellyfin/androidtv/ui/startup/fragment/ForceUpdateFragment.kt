@@ -39,8 +39,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -80,6 +80,8 @@ class ForceUpdateFragment : Fragment() {
 		const val ARG_RELEASE_NOTES = "release_notes"
 		const val ARG_RELEASE_URL = "release_url"
 		const val ARG_PUBLISHED_AT = "published_at"
+		const val ARG_EXPECTED_SHA256 = "expected_sha256"
+		const val ARG_IS_BETA = "is_beta"
 
 		fun newInstance(updateInfo: UpdateCheckerService.UpdateInfo) = ForceUpdateFragment().apply {
 			arguments = Bundle().apply {
@@ -89,6 +91,8 @@ class ForceUpdateFragment : Fragment() {
 				putString(ARG_RELEASE_NOTES, updateInfo.releaseNotes)
 				putString(ARG_RELEASE_URL, updateInfo.releaseUrl)
 				putString(ARG_PUBLISHED_AT, updateInfo.publishedAt)
+				putString(ARG_EXPECTED_SHA256, updateInfo.expectedSha256)
+				putBoolean(ARG_IS_BETA, updateInfo.isBeta)
 			}
 		}
 	}
@@ -107,11 +111,15 @@ class ForceUpdateFragment : Fragment() {
 				apkSize = arguments?.getLong(ARG_APK_SIZE) ?: 0L,
 				releaseNotes = arguments?.getString(ARG_RELEASE_NOTES) ?: "",
 				publishedAt = arguments?.getString(ARG_PUBLISHED_AT) ?: "",
+				isBeta = arguments?.getBoolean(ARG_IS_BETA) ?: false,
 				issueReporterService = issueReporterService,
 				onDownloadAndInstall = { onProgress ->
 					downloadAndInstall(
-						arguments?.getString(ARG_DOWNLOAD_URL) ?: "",
-						onProgress
+						downloadUrl = arguments?.getString(ARG_DOWNLOAD_URL) ?: "",
+						expectedSha256 = arguments?.getString(ARG_EXPECTED_SHA256),
+						version = arguments?.getString(ARG_VERSION) ?: "",
+						releaseNotes = arguments?.getString(ARG_RELEASE_NOTES) ?: "",
+						onProgress = onProgress,
 					)
 				}
 			)
@@ -120,8 +128,19 @@ class ForceUpdateFragment : Fragment() {
 
 	private suspend fun downloadAndInstall(
 		downloadUrl: String,
-		onProgress: (Float) -> Unit
+		expectedSha256: String?,
+		version: String,
+		releaseNotes: String,
+		onProgress: (downloaded: Long, total: Long) -> Unit,
 	): Boolean {
+		// Network check
+		if (!updateCheckerService.isNetworkAvailable()) {
+			withContext(Dispatchers.Main) {
+				Toast.makeText(requireContext(), getString(R.string.force_update_no_network), Toast.LENGTH_LONG).show()
+			}
+			return false
+		}
+
 		// Check install permission on Android 8+
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			if (!requireContext().packageManager.canRequestPackageInstalls()) {
@@ -138,11 +157,15 @@ class ForceUpdateFragment : Fragment() {
 		}
 
 		return try {
-			val result = updateCheckerService.downloadUpdate(downloadUrl) { progress ->
-				onProgress(progress / 100f)
-			}
+			val result = updateCheckerService.downloadUpdate(
+				downloadUrl = downloadUrl,
+				expectedSha256 = expectedSha256,
+				onProgress = onProgress,
+			)
 			result.fold(
 				onSuccess = { apkUri ->
+					// Save What's New for display after update installs
+					updateCheckerService.savePendingWhatsNew(version, releaseNotes)
 					updateCheckerService.installUpdate(apkUri)
 					true
 				},
@@ -161,6 +184,7 @@ class ForceUpdateFragment : Fragment() {
 private enum class UpdateState {
 	READY,
 	DOWNLOADING,
+	VERIFYING,
 	INSTALLING,
 	FAILED
 }
@@ -181,16 +205,19 @@ private fun ForceUpdateScreen(
 	apkSize: Long,
 	releaseNotes: String,
 	publishedAt: String,
+	isBeta: Boolean,
 	issueReporterService: IssueReporterService,
-	onDownloadAndInstall: suspend ((Float) -> Unit) -> Boolean,
+	onDownloadAndInstall: suspend ((downloaded: Long, total: Long) -> Unit) -> Boolean,
 ) {
 	var state by remember { mutableStateOf(UpdateState.READY) }
-	var progress by remember { mutableFloatStateOf(0f) }
+	var downloadedBytes by remember { mutableLongStateOf(0L) }
+	var totalBytes by remember { mutableLongStateOf(0L) }
 	var showReleaseNotes by remember { mutableStateOf(false) }
 	var showReportIssue by remember { mutableStateOf(false) }
 	val scope = rememberCoroutineScope()
 
 	val sizeMB = String.format("%.1f", apkSize / (1024.0 * 1024.0))
+	val progress = if (totalBytes > 0) downloadedBytes.toFloat() / totalBytes.toFloat() else 0f
 
 	Box(
 		modifier = Modifier
@@ -287,12 +314,26 @@ private fun ForceUpdateScreen(
 							color = Color(0xFF808080),
 							fontSize = 13.sp,
 						)
-						Text(
-							text = version,
-							color = Color(0xFFCC3333),
-							fontSize = 13.sp,
-							fontWeight = FontWeight.Medium,
-						)
+						Row(verticalAlignment = Alignment.CenterVertically) {
+							Text(
+								text = version,
+								color = Color(0xFFCC3333),
+								fontSize = 13.sp,
+								fontWeight = FontWeight.Medium,
+							)
+							if (isBeta) {
+								Spacer(modifier = Modifier.width(6.dp))
+								Text(
+									text = stringResource(R.string.force_update_beta_badge),
+									color = Color.White,
+									fontSize = 10.sp,
+									fontWeight = FontWeight.Bold,
+									modifier = Modifier
+										.background(Color(0xFFCC3333), RoundedCornerShape(4.dp))
+										.padding(horizontal = 6.dp, vertical = 2.dp),
+								)
+							}
+						}
 					}
 					Spacer(modifier = Modifier.height(6.dp))
 					Row(
@@ -347,10 +388,43 @@ private fun ForceUpdateScreen(
 						trackColor = Color(0xFF3A1A1A),
 					)
 					Spacer(modifier = Modifier.height(4.dp))
+					Row(
+						modifier = Modifier.fillMaxWidth(),
+						horizontalArrangement = Arrangement.SpaceBetween,
+					) {
+						Text(
+							text = "${(progress * 100).toInt()}%",
+							color = Color(0xFF808080),
+							fontSize = 12.sp,
+						)
+						if (totalBytes > 0) {
+							Text(
+								text = stringResource(
+									R.string.force_update_download_progress,
+									String.format("%.1f", downloadedBytes / (1024.0 * 1024.0)),
+									String.format("%.1f", totalBytes / (1024.0 * 1024.0)),
+								),
+								color = Color(0xFF808080),
+								fontSize = 12.sp,
+							)
+						}
+					}
+					Spacer(modifier = Modifier.height(16.dp))
+				}
+
+				if (state == UpdateState.VERIFYING) {
 					Text(
-						text = "${(progress * 100).toInt()}%",
-						color = Color(0xFF808080),
-						fontSize = 12.sp,
+						text = stringResource(R.string.force_update_verifying),
+						color = Color(0xFFB0B0B0),
+						fontSize = 14.sp,
+					)
+					Spacer(modifier = Modifier.height(8.dp))
+					LinearProgressIndicator(
+						modifier = Modifier
+							.fillMaxWidth()
+							.height(8.dp),
+						color = Color(0xFFCC3333),
+						trackColor = Color(0xFF3A1A1A),
 					)
 					Spacer(modifier = Modifier.height(16.dp))
 				}
@@ -371,10 +445,16 @@ private fun ForceUpdateScreen(
 					onClick = {
 						if (state == UpdateState.READY || state == UpdateState.FAILED) {
 							state = UpdateState.DOWNLOADING
-							progress = 0f
+							downloadedBytes = 0L
+							totalBytes = 0L
 							scope.launch(Dispatchers.IO) {
-								val success = onDownloadAndInstall { p ->
-									progress = p
+								val success = onDownloadAndInstall { downloaded, total ->
+									downloadedBytes = downloaded
+									totalBytes = total
+									// When download completes (100%), switch to verifying
+									if (total > 0 && downloaded >= total && state == UpdateState.DOWNLOADING) {
+										state = UpdateState.VERIFYING
+									}
 								}
 								withContext(Dispatchers.Main) {
 									state = if (success) UpdateState.INSTALLING else UpdateState.FAILED
@@ -403,6 +483,7 @@ private fun ForceUpdateScreen(
 						text = when (state) {
 							UpdateState.READY -> stringResource(R.string.force_update_button)
 							UpdateState.DOWNLOADING -> stringResource(R.string.force_update_downloading)
+							UpdateState.VERIFYING -> stringResource(R.string.force_update_verifying)
 							UpdateState.INSTALLING -> stringResource(R.string.force_update_installing)
 							UpdateState.FAILED -> stringResource(R.string.force_update_download_failed)
 						},

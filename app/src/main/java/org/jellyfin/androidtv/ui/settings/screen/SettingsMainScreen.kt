@@ -162,6 +162,16 @@ fun SettingsMainScreen() {
 		}
 
 		item {
+			var betaUpdatesEnabled by rememberPreference(userPreferences, UserPreferences.betaUpdatesEnabled)
+			ListButton(
+				headingContent = { Text(stringResource(R.string.pref_beta_channel)) },
+				captionContent = { Text(stringResource(R.string.pref_beta_channel_description)) },
+				trailingContent = { Checkbox(checked = betaUpdatesEnabled) },
+				onClick = { betaUpdatesEnabled = !betaUpdatesEnabled }
+			)
+		}
+
+		item {
 			ListButton(
 				leadingContent = {
 					Icon(
@@ -355,13 +365,17 @@ private fun downloadAndInstall(
 		Toast.makeText(context, "Downloading update…", Toast.LENGTH_SHORT).show()
 
 		try {
-			val result = updateChecker.downloadUpdate(updateInfo.downloadUrl) { progress ->
-				Timber.d("Download progress: $progress%")
+			val result = updateChecker.downloadUpdate(
+				downloadUrl = updateInfo.downloadUrl,
+				expectedSha256 = updateInfo.expectedSha256,
+			) { downloaded, total ->
+				Timber.d("Download progress: ${if (total > 0) (downloaded * 100 / total) else 0}%")
 			}
 
 			result.fold(
 				onSuccess = { apkUri ->
 					Toast.makeText(context, "Update downloaded", Toast.LENGTH_SHORT).show()
+					updateChecker.savePendingWhatsNew(updateInfo.version, updateInfo.releaseNotes)
 					updateChecker.installUpdate(apkUri)
 				},
 				onFailure = { error ->
