@@ -8,6 +8,13 @@
 ---
 
 [![Release](https://img.shields.io/github/release/ToastyToast25/VoidStream-FireTV.svg)](https://github.com/ToastyToast25/VoidStream-FireTV/releases)
+![Android SDK](https://img.shields.io/badge/Android_SDK-23%E2%80%9336-3DDC84?logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.3.0-7F52FF?logo=kotlin&logoColor=white)
+![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Gradle](https://img.shields.io/badge/Gradle-9.3.1-02303A?logo=gradle&logoColor=white)
+![Jellyfin SDK](https://img.shields.io/badge/Jellyfin_SDK-1.8.6-00A4DC?logo=jellyfin&logoColor=white)
+![ExoPlayer](https://img.shields.io/badge/Media3-1.9.1-4285F4?logo=google&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Compose-1.10.2-4285F4?logo=jetpackcompose&logoColor=white)
 
 > **[← Back to main VoidStream project](https://github.com/ToastyToast25)**
 
