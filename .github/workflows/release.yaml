@@ -44,10 +44,25 @@ jobs:
           fi
 
   build-release-apks:
-    name: Build Release APKs
+    name: Build ${{ matrix.flavor }} APK
     needs: check-version-bump
     if: needs.check-version-bump.outputs.should_release == 'true'
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [github, amazon, googleplay]
+        include:
+          - flavor: github
+            artifact_name: voidstream-androidtv-github
+            build_aab: false
+          - flavor: amazon
+            artifact_name: voidstream-androidtv-amazon
+            build_aab: false
+          - flavor: googleplay
+            artifact_name: voidstream-androidtv-googleplay
+            build_aab: true
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -56,36 +71,210 @@ jobs:
         uses: ./.github/actions/setup-android
 
       - name: Decode keystore
-        run: echo "${{ secrets.RELEASE_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "ERROR: RELEASE_KEYSTORE_BASE64 secret is not set"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          echo "✓ Keystore decoded"
 
       - name: Create keystore.properties
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
+          if [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "ERROR: One or more keystore secrets are not set"
+            exit 1
+          fi
+
           cat > keystore.properties <<EOF
-          storeFile=release.keystore
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
+          storeFile=$(pwd)/release.keystore
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
           EOF
 
-      - name: Build all release APKs
+          echo "✓ keystore.properties created"
+
+      - name: Run unit tests
         run: |
-          ./gradlew assembleGithubRelease --parallel --build-cache --configuration-cache
-          ./gradlew assembleAmazonRelease --parallel --build-cache --configuration-cache
-          ./gradlew assembleGoogleplayRelease --parallel --build-cache --configuration-cache
+          FLAVOR_CAP="$(tr '[:lower:]' '[:upper:]' <<< ${matrix.flavor:0:1})${matrix.flavor:1}"
+          ./gradlew test${FLAVOR_CAP}ReleaseUnitTest \
+            --parallel \
+            --build-cache \
+            --configuration-cache
         env:
           GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1g
 
-      - name: Upload artifacts
+      - name: Build APK
+        run: |
+          FLAVOR_CAP="$(tr '[:lower:]' '[:upper:]' <<< ${matrix.flavor:0:1})${matrix.flavor:1}"
+          echo "Building ${FLAVOR_CAP}Release APK..."
+          ./gradlew assemble${FLAVOR_CAP}Release \
+            --parallel \
+            --build-cache \
+            --configuration-cache \
+            --stacktrace
+        env:
+          GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1g
+
+      - name: Build AAB (Google Play only)
+        if: matrix.build_aab
+        run: |
+          FLAVOR_CAP="$(tr '[:lower:]' '[:upper:]' <<< ${matrix.flavor:0:1})${matrix.flavor:1}"
+          echo "Building ${FLAVOR_CAP}Release AAB..."
+          ./gradlew bundle${FLAVOR_CAP}Release \
+            --parallel \
+            --build-cache \
+            --configuration-cache \
+            --stacktrace
+        env:
+          GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1g
+
+      - name: Verify APK signature
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/${{ matrix.flavor }}/release -name "*.apk" -type f | head -n 1)
+          echo "Verifying: $APK_PATH"
+
+          if ! jarsigner -verify -verbose -certs "$APK_PATH" | grep -q "jar verified"; then
+            echo "❌ Signature verification failed"
+            exit 1
+          fi
+
+          echo "✓ APK signature verified"
+
+      - name: Generate checksums
+        run: |
+          # APK checksums
+          cd app/build/outputs/apk/${{ matrix.flavor }}/release
+          for file in *.apk; do
+            if [ -f "$file" ]; then
+              sha256sum "$file" > "$file.sha256"
+              echo "✓ Checksum for $file:"
+              cat "$file.sha256"
+            fi
+          done
+
+          # AAB checksums (Google Play only)
+          if [ "${{ matrix.build_aab }}" = "true" ]; then
+            cd ../../../../bundle/${{ matrix.flavor }}Release
+            for file in *.aab; do
+              if [ -f "$file" ]; then
+                sha256sum "$file" > "$file.sha256"
+                echo "✓ Checksum for $file:"
+                cat "$file.sha256"
+              fi
+            done
+          fi
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: release-apks
-          retention-days: 30
+          name: ${{ matrix.artifact_name }}-apk
+          path: |
+            app/build/outputs/apk/${{ matrix.flavor }}/release/*.apk
+            app/build/outputs/apk/${{ matrix.flavor }}/release/*.sha256
+          retention-days: 90
           if-no-files-found: error
-          path: app/build/outputs/apk/*/release/*.apk
+
+      - name: Upload AAB artifact (Google Play only)
+        if: matrix.build_aab
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ matrix.artifact_name }}-aab
+          path: |
+            app/build/outputs/bundle/${{ matrix.flavor }}Release/*.aab
+            app/build/outputs/bundle/${{ matrix.flavor }}Release/*.sha256
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: test-results-${{ matrix.flavor }}
+          path: |
+            **/build/reports/tests/**
+            **/build/test-results/**
+          retention-days: 14
+          if-no-files-found: ignore
+
+  validate-amazon:
+    name: Validate Amazon Compliance
+    needs: build-release-apks
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Download Amazon APK
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: voidstream-androidtv-amazon-apk
+
+      - name: Check for prohibited permissions
+        run: |
+          APK=$(find . -name "*.apk" -type f | head -n 1)
+          echo "Checking: $APK"
+
+          if aapt dump permissions "$APK" | grep -q "REQUEST_INSTALL_PACKAGES"; then
+            echo "❌ FAIL: REQUEST_INSTALL_PACKAGES found"
+            exit 1
+          fi
+
+          echo "✓ PASS: No prohibited permissions"
+
+      - name: Check for FileProvider
+        run: |
+          APK=$(find . -name "*.apk" -type f | head -n 1)
+
+          if aapt dump xmltree "$APK" AndroidManifest.xml | grep -qi "FileProvider"; then
+            echo "❌ FAIL: FileProvider found"
+            exit 1
+          fi
+
+          echo "✓ PASS: No FileProvider"
+
+  validate-googleplay:
+    name: Validate Google Play Compliance
+    needs: build-release-apks
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Download Google Play APK
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: voidstream-androidtv-googleplay-apk
+
+      - name: Check for prohibited permissions
+        run: |
+          APK=$(find . -name "*.apk" -type f | head -n 1)
+          echo "Checking: $APK"
+
+          if aapt dump permissions "$APK" | grep -q "REQUEST_INSTALL_PACKAGES"; then
+            echo "❌ FAIL: REQUEST_INSTALL_PACKAGES found"
+            exit 1
+          fi
+
+          echo "✓ PASS: No prohibited permissions"
+
+      - name: Check for FileProvider
+        run: |
+          APK=$(find . -name "*.apk" -type f | head -n 1)
+
+          if aapt dump xmltree "$APK" AndroidManifest.xml | grep -qi "FileProvider"; then
+            echo "❌ FAIL: FileProvider found"
+            exit 1
+          fi
+
+          echo "✓ PASS: No FileProvider"
 
   create-github-release:
     name: Create GitHub Release
-    needs: [check-version-bump, build-release-apks]
+    needs: [check-version-bump, build-release-apks, validate-amazon, validate-googleplay]
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout repository
@@ -93,11 +282,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Download artifacts
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v6.1.0
+      - name: Download all artifacts
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
-          name: release-apks
-          path: apks/
+          path: artifacts
 
       - name: Check if pre-release
         id: prerelease
@@ -130,19 +318,59 @@ jobs:
           # Build release notes
           {
             echo "notes<<EOF"
+            echo "# VoidStream v${VERSION}"
+            echo ""
             echo "## Changes"
             echo ""
             echo "$COMMITS"
             echo ""
-            echo "## APK Files"
+            echo "## Downloads"
             echo ""
-            echo "- **GitHub (Sideload)**: \`voidstream-androidtv-v${VERSION}-github-release.apk\` - For direct installation with OTA updates"
-            echo "- **Amazon Appstore**: \`voidstream-androidtv-v${VERSION}-amazon-release.apk\` - For Amazon Appstore submission"
-            echo "- **Google Play Store**: \`voidstream-androidtv-v${VERSION}-googleplay-release.apk\` - For Google Play Store submission"
+            echo "### 📱 GitHub (Sideloaded) Build"
+            echo "- ✅ Includes OTA self-update system"
+            echo "- ✅ Includes donate button"
+            echo "- 📺 For Fire TV, Android TV, Nvidia Shield"
             echo ""
-            echo "🤖 Generated with [Claude Code](https://claude.com/claude-code)"
+            echo "**APK:** \`voidstream-androidtv-v${VERSION}-github-release.apk\`"
+            echo ""
+            echo "### 🛒 Amazon Appstore Build"
+            echo "- ⛔ No OTA updates (managed by Amazon)"
+            echo "- ⛔ No donate button"
+            echo "- ✅ Store compliance validated"
+            echo ""
+            echo "**APK:** \`voidstream-androidtv-v${VERSION}-amazon-release.apk\`"
+            echo ""
+            echo "### 🛒 Google Play Store Build"
+            echo "- ⛔ No OTA updates (managed by Google Play)"
+            echo "- ⛔ No donate button"
+            echo "- ✅ Store compliance validated"
+            echo "- 📦 Includes both APK and AAB formats"
+            echo ""
+            echo "**APK:** \`voidstream-androidtv-v${VERSION}-googleplay-release.apk\`"
+            echo "**AAB:** \`voidstream-androidtv-v${VERSION}-googleplay-release.aab\`"
+            echo ""
+            echo "## 🔒 Verification"
+            echo ""
+            echo "All APKs include SHA-256 checksums (\`.sha256\` files). Verify before installing:"
+            echo ""
+            echo "\`\`\`bash"
+            echo "sha256sum -c voidstream-androidtv-v${VERSION}-github-release.apk.sha256"
+            echo "\`\`\`"
+            echo ""
+            echo "## 📖 Installation"
+            echo ""
+            echo "See the [README](https://github.com/ToastyToast25/VoidStream-FireTV/blob/master/README.md) for installation instructions."
+            echo ""
+            echo "---"
+            echo ""
+            echo "🤖 Built automatically with GitHub Actions"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
+
+      - name: List artifacts
+        run: |
+          echo "Downloaded artifacts:"
+          find artifacts -type f \( -name "*.apk" -o -name "*.aab" -o -name "*.sha256" \)
 
       - name: Create release
         env:
@@ -162,4 +390,23 @@ jobs:
             --title "VoidStream v${VERSION}" \
             --notes "${{ steps.notes.outputs.notes }}" \
             $PRERELEASE_FLAG \
-            apks/*/*.apk
+            artifacts/voidstream-androidtv-github-apk/*.apk \
+            artifacts/voidstream-androidtv-github-apk/*.sha256 \
+            artifacts/voidstream-androidtv-amazon-apk/*.apk \
+            artifacts/voidstream-androidtv-amazon-apk/*.sha256 \
+            artifacts/voidstream-androidtv-googleplay-apk/*.apk \
+            artifacts/voidstream-androidtv-googleplay-apk/*.sha256 \
+            artifacts/voidstream-androidtv-googleplay-aab/*.aab \
+            artifacts/voidstream-androidtv-googleplay-aab/*.sha256
+
+      - name: Notify on success
+        if: success()
+        run: |
+          echo "✅ Release v${{ needs.check-version-bump.outputs.version }} created successfully"
+          echo "URL: https://github.com/ToastyToast25/VoidStream-FireTV/releases/tag/v${{ needs.check-version-bump.outputs.version }}"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Release creation failed"
+          echo "Check workflow logs above for details"
