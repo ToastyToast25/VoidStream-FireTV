@@ -14,7 +14,7 @@ echo VoidStream Build Tool - Session started at %date% %time% > "%LOGFILE%"
 echo. >> "%LOGFILE%"
 
 REM ============================================
-REM   VoidStream APK Build Tool v1.0
+REM   VoidStream APK Build Tool v2.0
 REM ============================================
 echo.
 echo Log file: %LOGFILE%
@@ -45,13 +45,13 @@ if not exist "%ADB%" (
 :MAIN_MENU
 cls
 echo ========================================
-echo   VoidStream APK Build Tool v1.0
+echo   VoidStream APK Build Tool v2.0
 echo ========================================
 echo.
 echo Select build flavors:
-echo   [1] GitHub (sideload)
-echo   [2] Amazon Appstore
-echo   [3] Google Play Store
+echo   [1] GitHub (ARM 32/64, x86 32/64 - Universal)
+echo   [2] Amazon Appstore (ARM 32-bit only)
+echo   [3] Google Play Store (ARM 64/32-bit)
 echo   [4] All flavors
 echo.
 set /p FLAVOR_CHOICE="Choice: "
@@ -237,6 +237,21 @@ for %%f in (%FLAVORS%) do (
 
     echo.
     echo ✓ %%f %BUILD_TYPE% build complete
+
+    REM Display APK info
+    set FLAVOR_LOWER=%%f
+    call :ToLower FLAVOR_LOWER
+
+    for %%a in ("app\build\outputs\apk\!FLAVOR_LOWER!\%BUILD_TYPE_LOWER%\*.apk") do (
+        set APK_SIZE=%%~za
+        set /a APK_SIZE_MB=!APK_SIZE! / 1048576
+        echo   APK: %%~nxa (!APK_SIZE_MB! MB^)
+
+        REM Show architecture info
+        if /i "!FLAVOR_LOWER!"=="github" echo   Architectures: ARM 32/64-bit, x86 32/64-bit (Universal^)
+        if /i "!FLAVOR_LOWER!"=="amazon" echo   Architectures: ARM 32-bit only (Fire TV optimized^)
+        if /i "!FLAVOR_LOWER!"=="googleplay" echo   Architectures: ARM 64/32-bit (Google Play compliant^)
+    )
 )
 
 if %BUILD_SUCCESS%==1 (
@@ -251,6 +266,11 @@ if %BUILD_SUCCESS%==1 (
     ) else (
         echo   %OUTPUT_DIR%\
     )
+    echo.
+    echo Architecture Summary:
+    echo   GitHub:      ARM 32/64-bit + x86 32/64-bit (Universal)
+    echo   Amazon:      ARM 32-bit only (28%% smaller, Fire TV optimized)
+    echo   Google Play: ARM 64/32-bit (Meets August 2026 requirements)
     echo.
 )
 
