@@ -1,0 +1,27 @@
+name: Setup Android Build Environment
+description: Sets up Java, Gradle, and Android SDK with optimal caching
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Java
+      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+      with:
+        distribution: temurin
+        java-version-file: .tools-versions
+        cache: gradle
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@f29f5a9d7b09a7c6b29859002d29d24e1674c884 # v5.0.1
+      with:
+        cache-read-only: ${{ github.ref != 'refs/heads/master' && 'true' || 'false' }}
+
+    - name: Gradle build cache
+      uses: actions/cache@6849a6489940f00c2f30c0fb92c6274307ccb58a # v4.2.0
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+          .gradle/
+        key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: gradle-${{ runner.os }}-
