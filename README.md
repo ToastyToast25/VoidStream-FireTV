@@ -16,8 +16,8 @@
 ![ExoPlayer](https://img.shields.io/badge/Media3-1.9.1-4285F4?logo=google&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Compose-1.10.2-4285F4?logo=jetpackcompose&logoColor=white)
 
-[![Amazon Appstore](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml/badge.svg?event=push&job=amazon-compliance)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml)
-[![Google Play Store](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml/badge.svg?event=push&job=google-play-compliance)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml)
+[![Amazon Appstore Compliance](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml/badge.svg?event=push)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml) [![Google Play Compliance](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml/badge.svg?event=push)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml)
+[![Code Quality](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/code-quality.yaml/badge.svg)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/code-quality.yaml) [![Tests](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/test.yaml/badge.svg)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/test.yaml) [![Security](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/security.yaml/badge.svg)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/security.yaml)
 
 > **[← Back to main VoidStream project](https://github.com/ToastyToast25)**
 
