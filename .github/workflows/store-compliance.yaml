@@ -62,25 +62,9 @@ jobs:
           echo "APK: $APK"
           echo ""
 
-          # Find aapt2 (newer version, should be available)
-          AAPT=$(find "$ANDROID_HOME/build-tools" -name "aapt2" | sort -V | tail -1)
-          if [ -z "$AAPT" ]; then
-            echo "❌ ERROR: aapt2 not found in Android SDK"
-            exit 1
-          fi
-          echo "Using: $AAPT"
-          echo ""
-
-          # Check for REQUEST_INSTALL_PACKAGES permission (should NOT exist)
+          # Use unzip + grep for reliable APK inspection
           echo "Checking for REQUEST_INSTALL_PACKAGES permission..."
-          PERMISSIONS=$("$AAPT" dump permissions "$APK" 2>&1)
-          if [ $? -ne 0 ]; then
-            echo "❌ ERROR: Failed to dump permissions"
-            echo "$PERMISSIONS"
-            exit 1
-          fi
-
-          if echo "$PERMISSIONS" | grep -q "REQUEST_INSTALL_PACKAGES"; then
+          if unzip -p "$APK" AndroidManifest.xml | grep -q "REQUEST_INSTALL_PACKAGES"; then
             echo "❌ FAIL: REQUEST_INSTALL_PACKAGES found (violates ${{ matrix.store }} policy)"
             exit 1
           else
@@ -89,14 +73,7 @@ jobs:
 
           # Check for FileProvider (should NOT exist)
           echo "Checking for FileProvider..."
-          MANIFEST=$("$AAPT" dump xmltree "$APK" AndroidManifest.xml 2>&1)
-          if [ $? -ne 0 ]; then
-            echo "❌ ERROR: Failed to dump manifest"
-            echo "$MANIFEST"
-            exit 1
-          fi
-
-          if echo "$MANIFEST" | grep -q "FileProvider"; then
+          if unzip -p "$APK" AndroidManifest.xml | grep -q "FileProvider"; then
             echo "❌ FAIL: FileProvider found (not needed for ${{ matrix.flavor }} build)"
             exit 1
           else
