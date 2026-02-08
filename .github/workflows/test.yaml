@@ -1,0 +1,52 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - master
+      - release-*
+    paths-ignore:
+      - '**.md'
+      - 'LOGOS/**'
+      - 'SCREENSHOTS/**'
+      - 'BACKUP-LOGOS/**'
+      - '.gitignore'
+      - 'LICENSE'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'LOGOS/**'
+      - 'SCREENSHOTS/**'
+      - 'BACKUP-LOGOS/**'
+      - '.gitignore'
+      - 'LICENSE'
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Android
+        uses: ./.github/actions/setup-android
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --parallel --build-cache --configuration-cache
+        env:
+          GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1g
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: test-results
+          retention-days: 14
+          if-no-files-found: ignore
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/

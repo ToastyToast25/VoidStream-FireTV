@@ -1,0 +1,75 @@
+name: Code Quality
+
+on:
+  push:
+    branches:
+      - master
+      - release-*
+    paths-ignore:
+      - '**.md'
+      - 'LOGOS/**'
+      - 'SCREENSHOTS/**'
+      - 'BACKUP-LOGOS/**'
+      - '.gitignore'
+      - 'LICENSE'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'LOGOS/**'
+      - 'SCREENSHOTS/**'
+      - 'BACKUP-LOGOS/**'
+      - '.gitignore'
+      - 'LICENSE'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  detekt:
+    name: Detekt
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Android
+        uses: ./.github/actions/setup-android
+
+      - name: Run Detekt
+        run: ./gradlew detekt --parallel --build-cache --configuration-cache
+        env:
+          GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1g
+
+      - name: Upload SARIF report
+        if: always()
+        uses: github/codeql-action/upload-sarif@ea9e4e37992a54ee68a9622e985e60c8e8f12d9f # v3.27.10
+        with:
+          sarif_file: build/reports/detekt/detekt.sarif
+        continue-on-error: true
+
+  android-lint:
+    name: Android Lint
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Android
+        uses: ./.github/actions/setup-android
+
+      - name: Run Android Lint
+        run: ./gradlew lintDebug --parallel --build-cache --configuration-cache
+        env:
+          GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1g
+
+      - name: Upload lint reports
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: lint-reports
+          retention-days: 14
+          if-no-files-found: ignore
+          path: |
+            **/build/reports/lint-results-*.html
+            **/build/reports/lint-results-*.xml
