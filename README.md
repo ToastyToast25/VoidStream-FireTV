@@ -392,7 +392,7 @@ VoidStream features a **modular plugin architecture** that allows both the clien
 - ✅ **Full Support** - Official support channels
 - ✅ **Automatic Updates** - Via Google Play / Amazon Appstore
 - 💰 **Paid Premium Features** - One-time purchase or subscription
-- 🌐 **Cross-Platform License** - Buy once, use on all VoidStream clients (Android TV, Desktop, Web, Roku)
+- 🌐 **Cross-Platform License** - Buy once, use on all VoidStream clients (Android TV, Desktop, Roku)
 
 **Coming Soon:**
 - **IPTV Plugin** - Live TV integration (M3U, EPG, Xtream Codes, Stalker)
@@ -434,7 +434,6 @@ The plugin ecosystem is designed to work across **all VoidStream platforms**:
 
 - 📱 VoidStream for Android TV / Fire TV *(Current)*
 - 💻 VoidStream Desktop *(Planned)*
-- 🌐 VoidStream Web *(Planned)*
 - 📺 VoidStream for Roku *(Planned)*
 
 **🎁 Buy Once, Use Everywhere:** Purchase a plugin once and access it on all your VoidStream clients. Your plugin licenses are tied to your account, not a specific device or platform.
