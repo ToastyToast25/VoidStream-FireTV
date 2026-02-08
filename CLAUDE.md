@@ -34,6 +34,8 @@ git commit -m "Your commit message"
 git push origin master
 ```
 
+**Important:** Do not include "Co-Authored-By: Claude" or any AI attribution in commit messages. All commits should appear as authored by the repository owner only.
+
 ## Pulling Upstream Updates
 
 ```bash
