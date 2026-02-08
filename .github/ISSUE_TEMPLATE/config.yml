@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability
+    url: https://github.com/ToastyToast25/VoidStream-FireTV/security/policy
+    about: Report security issues privately via our security policy
+  - name: GitHub Discussions
+    url: https://github.com/ToastyToast25/VoidStream-FireTV/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Documentation
+    url: https://github.com/ToastyToast25/VoidStream-FireTV/blob/master/CONTRIBUTING.md
+    about: Read our contributing guidelines and documentation
