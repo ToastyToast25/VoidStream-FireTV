@@ -5,7 +5,21 @@ on:
     branches:
       - master
       - release-*
+    paths-ignore:
+      - '**.md'
+      - 'LOGOS/**'
+      - 'SCREENSHOTS/**'
+      - 'BACKUP-LOGOS/**'
+      - '.gitignore'
+      - 'LICENSE'
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'LOGOS/**'
+      - 'SCREENSHOTS/**'
+      - 'BACKUP-LOGOS/**'
+      - '.gitignore'
+      - 'LICENSE'
 
 permissions:
   contents: read
@@ -17,15 +31,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Setup Java
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          distribution: temurin
-          java-version-file: .tools-versions
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@f29f5a9d7b09a7c6b29859002d29d24e1674c884 # v5.0.1
+
+      - name: Setup Android
+        uses: ./.github/actions/setup-android
+
       - name: Assemble debug APKs
-        run: ./gradlew assembleDebug
+        run: ./gradlew assembleDebug --parallel --build-cache --configuration-cache
+        env:
+          GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1g
       - name: Create publish bundle
         run: mkdir -p build/gh-app-publish/; find app/build/ -iname "*.apk" -exec mv "{}" build/gh-app-publish/ \;
       - name: Upload artifacts
