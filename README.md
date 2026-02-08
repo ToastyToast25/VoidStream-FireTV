@@ -16,6 +16,8 @@
 ![Koin](https://img.shields.io/badge/Koin-4.2.0--RC1-B125EA?logo=kotlin&logoColor=white)
 ![ExoPlayer](https://img.shields.io/badge/Media3-1.9.1-4285F4?logo=google&logoColor=white)
 ![Jetpack Compose](https://img.shields.io/badge/Compose-1.10.2-4285F4?logo=jetpackcompose&logoColor=white)
+![Coil](https://img.shields.io/badge/Coil-3.3.0-FFAA00?logo=kotlin&logoColor=white)
+![Leanback](https://img.shields.io/badge/Leanback-1.2.0-3DDC84?logo=android&logoColor=white)
 
 **CI/CD Status:**
 

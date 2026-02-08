@@ -37,6 +37,8 @@ jobs:
           KOIN=$(get_version "koin")
           MEDIA3=$(get_version "androidx-media3")
           COMPOSE_UI=$(get_version "androidx-compose-ui")
+          COIL=$(get_version "coil")
+          LEANBACK=$(get_version "androidx-leanback")
 
           # Extract Gradle version from wrapper properties
           GRADLE=$(grep "distributionUrl" "$WRAPPER" | sed 's/.*gradle-\(.*\)-bin.zip/\1/')
@@ -46,6 +48,7 @@ jobs:
 
           echo "Kotlin=$KOTLIN Java=$JAVA_JDK SDK=$MIN_SDK-$TARGET_SDK Gradle=$GRADLE"
           echo "Jellyfin SDK=$JELLYFIN_SDK Koin=$KOIN Media3=$MEDIA3 Compose=$COMPOSE_UI"
+          echo "Coil=$COIL Leanback=$LEANBACK"
 
           # Update each badge in README.md using sed
           sed -i "s|Android_SDK-[^-]*-3DDC84|Android_SDK-${SDK_RANGE}-3DDC84|" README.md
@@ -56,6 +59,8 @@ jobs:
           sed -i "s|Koin-[^-]*--[^-]*-B125EA|Koin-${KOIN}-B125EA|" README.md
           sed -i "s|Media3-[^-]*-4285F4|Media3-${MEDIA3}-4285F4|" README.md
           sed -i "s|Compose-[^-]*-4285F4|Compose-${COMPOSE_UI}-4285F4|" README.md
+          sed -i "s|Coil-[^-]*-FFAA00|Coil-${COIL}-FFAA00|" README.md
+          sed -i "s|Leanback-[^-]*-3DDC84|Leanback-${LEANBACK}-3DDC84|" README.md
 
       - name: Check for changes
         id: changes
