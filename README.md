@@ -372,28 +372,61 @@ This means:
 - ✅ **Build from Source** - Complete build instructions provided
 - ⚠️ **Copyleft** - All modifications must remain GPL v2
 
-### Plugin Architecture
+### Plugin Ecosystem
 
-VoidStream supports **separate plugin modules** that extend functionality. These plugins are:
+VoidStream features a **modular plugin architecture** that allows both the client and Jellyfin server to be extended with additional functionality. Plugins are distributed separately from the core GPL-licensed application, enabling premium features while keeping the base client free and open source.
 
-- **Not part of the GPL-licensed codebase**
-- **Distributed separately** under their own licenses
-- **Optional paid add-ons** (e.g., upcoming IPTV plugin)
+#### How Plugins Work
+
+- **Separate Distribution** - Plugins are standalone APKs, not part of the core codebase
+- **Independent Licensing** - Plugins can be proprietary and monetized
+- **IPC Communication** - Plugins communicate with the core app via Android's AIDL interface
+- **No GPL Contamination** - Plugin code remains separate, maintaining GPL compliance
+- **Client & Server Enhancement** - Plugins can extend both VoidStream clients and Jellyfin servers
+
+#### Official Plugins
+
+**Official VoidStream plugins** are developed and maintained by the VoidStream team:
+
+- ✅ **Quality Guaranteed** - Rigorously tested and maintained
+- ✅ **Full Support** - Official support channels
+- ✅ **Automatic Updates** - Via Google Play / Amazon Appstore
+- 💰 **Paid Premium Features** - One-time purchase or subscription
+
+**Coming Soon:**
+- **IPTV Plugin** - Live TV integration (M3U, EPG, Xtream Codes, Stalker)
+- **Advanced Playback Plugin** - Enhanced codecs and audio processing
+- **Smart Home Integration** - Control via Alexa, Google Assistant, Home Assistant
+
+[View Official Plugin Catalog →](https://github.com/ToastyToast25/VoidStream-Plugins) *(Coming soon)*
+
+#### Community Plugins
+
+The VoidStream community can develop **unofficial plugins** using our open plugin API:
+
+- 🔓 **Open API** - Plugin development SDK available to all
+- 🌐 **Community-Driven** - Built by developers worldwide
+- ⚠️ **Use at Own Risk** - Not officially supported by VoidStream
+- 📝 **Various Licenses** - Community plugins may be free or paid
+
+**Interested in building a plugin?** Check out our [Plugin Development Guide](docs/PLUGINS.md) *(Coming soon)*
+
+[Browse Community Plugins →](https://github.com/ToastyToast25/VoidStream-Plugins/discussions) *(Coming soon)*
+
+#### Future VoidStream Clients
+
+The plugin ecosystem is designed to work across **all VoidStream platforms**:
+
+- 📱 VoidStream for Android TV / Fire TV *(Current)*
+- 💻 VoidStream Desktop *(Planned)*
+- 🌐 VoidStream Web *(Planned)*
+- 📺 VoidStream for Roku *(Planned)*
+
+All official plugins will be compatible across VoidStream clients where technically feasible.
 
 ### Branding
 
 The "VoidStream" name, logos, and visual assets are trademarks and remain proprietary even though the code is GPL.
-
-### Coming Soon: Premium IPTV Plugin
-
-We're developing a **proprietary IPTV plugin** that will add premium features:
-
-- Live TV channel integration
-- M3U playlist support
-- EPG (Electronic Program Guide)
-- Xtream Codes and Stalker portal support
-
-This plugin will be distributed separately as a paid add-on and is not subject to GPL.
 
 See the [LICENSE](LICENSE) file for full GPL v2 terms.
 
