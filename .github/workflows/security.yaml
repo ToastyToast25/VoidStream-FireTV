@@ -86,7 +86,7 @@ jobs:
         uses: ./.github/actions/setup-android
 
       - name: Build for CodeQL
-        run: ./gradlew assembleDebug --parallel --build-cache
+        run: ./gradlew assembleGithubDebug --parallel --build-cache --no-configuration-cache
         env:
           GRADLE_OPTS: -Xmx4096m -XX:MaxMetaspaceSize=1g
           ORG_GRADLE_PROJECT_kotlin.daemon.jvmargs: -Xmx3g -XX:MaxMetaspaceSize=1g
