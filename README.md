@@ -18,11 +18,12 @@
 
 **CI/CD Status:**
 
-[![Amazon Appstore](https://img.shields.io/github/actions/workflow/status/ToastyToast25/VoidStream-FireTV/store-compliance.yaml?branch=master&label=Amazon%20Appstore&logo=amazon&logoColor=white)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml)
-[![Google Play](https://img.shields.io/github/actions/workflow/status/ToastyToast25/VoidStream-FireTV/store-compliance.yaml?branch=master&label=Google%20Play&logo=googleplay&logoColor=white)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml)
+[![Store Compliance](https://img.shields.io/github/actions/workflow/status/ToastyToast25/VoidStream-FireTV/store-compliance.yaml?branch=master&label=Store%20Compliance&logo=checkmarx&logoColor=white)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/store-compliance.yaml)
 [![Code Quality](https://img.shields.io/github/actions/workflow/status/ToastyToast25/VoidStream-FireTV/code-quality.yaml?branch=master&label=Code%20Quality&logo=kotlin&logoColor=white)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/code-quality.yaml)
 [![Tests](https://img.shields.io/github/actions/workflow/status/ToastyToast25/VoidStream-FireTV/test.yaml?branch=master&label=Tests&logo=junit5&logoColor=white)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/test.yaml)
 [![Security](https://img.shields.io/github/actions/workflow/status/ToastyToast25/VoidStream-FireTV/security.yaml?branch=master&label=Security&logo=github&logoColor=white)](https://github.com/ToastyToast25/VoidStream-FireTV/actions/workflows/security.yaml)
+
+<!-- Store Compliance validates both Amazon Appstore and Google Play policies -->
 
 > **[← Back to main VoidStream project](https://github.com/ToastyToast25)**
 
