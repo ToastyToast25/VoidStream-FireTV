@@ -124,6 +124,34 @@ app/build/outputs/bundle/googleplayRelease/voidstream-androidtv-v{VERSION}-googl
 
 Google Play requires AAB format for store submission. Use `./gradlew bundleGoogleplayRelease` to build the AAB. APK builds are still available for local testing.
 
+### Architecture Detection (How GitHub APK Works)
+
+The **GitHub APK** includes all 4 architectures (ARM 32/64, x86 32/64) but Android **automatically detects** the device's architecture during installation and extracts only the matching libraries:
+
+**Universal APK Contents:**
+
+- `lib/armeabi-v7a/` — 32-bit ARM libraries
+- `lib/arm64-v8a/` — 64-bit ARM libraries
+- `lib/x86/` — 32-bit Intel libraries
+- `lib/x86_64/` — 64-bit Intel libraries
+
+**Automatic Installation:**
+
+| Device Type | Installed Libraries | Example Devices                  |
+|-------------|---------------------|----------------------------------|
+| ARM 32-bit  | Only `armeabi-v7a`  | Older Fire TVs, older phones     |
+| ARM 64-bit  | Only `arm64-v8a`    | Newer Android TVs, most phones   |
+| x86 32-bit  | Only `x86`          | Older Android emulators          |
+| x86_64      | Only `x86_64`       | Newer emulators, Chromebooks     |
+
+**Result:** Even though the GitHub APK is 45 MB, the **installed app size** is similar to the platform-specific builds because only one architecture's libraries are extracted. This is handled automatically by Android's Package Manager — no user action required.
+
+**Why platform-specific builds?**
+
+- **Faster downloads**: Smaller APK = faster download for store users
+- **Store compliance**: Amazon requires 32-bit only, Google Play requires 64-bit support
+- **Optimization**: Each store gets exactly what it needs, nothing more
+
 ### How the Gating System Works
 
 Features are gated using **two mechanisms**:
